@@ -1,6 +1,6 @@
 """Benchmark Sokoban: mỗi map chạy trong một tiến trình mới có timeout."""
 import argparse, json, subprocess, sys, time
-
+from collections import Counter #thêm import collections
 
 def run_worker(index, timebound):
     """Chạy TRONG tiến trình con: giải map số index, in 1 dòng RESULT."""
@@ -72,8 +72,8 @@ def main():
         print(f"{i:<6}{r['status']:<10}{str(r['steps']):>8}{r['time']:>10.2f}s  {r['valid']}",
               flush=True)
     # TODO: cuối bảng in tổng: bao nhiêu map SOLVED / NOSOL / TIMEOUT / CRASH
-    print(collections.Counter([r["status"] for r in results]))
-    
+    print(Counter([r["status"] for r in results])) #sửa lại in tổng kết
+
 
 
 if __name__ == "__main__":

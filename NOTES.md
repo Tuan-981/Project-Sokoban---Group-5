@@ -7,6 +7,7 @@
     3. Từ trạng thái đầu, thứ tự sinh trạng thái hợp lệ là UP, RIGHT, DOWN; LEFT không hợp lệ.
     4. BFS lấy trạng thái đầu ra xét trước, sau đó lấy trạng thái RIGHT có hộp ở đích và dừng.
     5. Kết quả: đường đi RIGHT, chi phí gval = 1, mở rộng 1 trạng thái không phải đích.
+ - Long-14/10/2026 sửa file benchmark.py: thêm import collections(line 3), sửa lại in tổng kết (line 75)
 ### Quyết định và lý do
 - Quyt định: ... Vì sao: ... Phương án bị loại: ...
 ### Kt qu benchmark
