@@ -1,5 +1,5 @@
 """Benchmark Sokoban: mỗi map chạy trong một tiến trình mới có timeout."""
-import argparse, json, subprocess, sys, time
+import argparse, collections, json, os, subprocess, sys, time
 
 
 def run_worker(index, timebound):
@@ -28,7 +28,8 @@ def run_one(index, timebound):
     start = time.time()
     try:
         p = subprocess.run(cmd, capture_output=True, text=True,
-                           errors="replace", timeout=timebound + 10)
+                           errors="replace", timeout=timebound + 10,
+                           cwd=os.path.dirname(os.path.abspath(__file__)))
     except subprocess.TimeoutExpired:
         return {"status": "TIMEOUT", "steps": None,
                 "time": time.time() - start, "valid": "-"}
@@ -53,11 +54,6 @@ def main():
         run_worker(args.worker, args.timebound)
         return
 
-    
-    # TODO: lấy danh sách chỉ số map (mặc định range(20)), gọi run_one cho từng map,
-    #       in một hàng ngay sau mỗi map (đừng đợi chạy hết mới in)
-    # TODO: in tiêu đề bảng: Map | Trạng thái | Số bước | Thời gian | Validate
-
 
     maps = args.maps if args.maps else range(20)
     results = []
@@ -71,8 +67,13 @@ def main():
         results.append(r)
         print(f"{i:<6}{r['status']:<10}{str(r['steps']):>8}{r['time']:>10.2f}s  {r['valid']}",
               flush=True)
-    # TODO: cuối bảng in tổng: bao nhiêu map SOLVED / NOSOL / TIMEOUT / CRASH
-    print(collections.Counter([r["status"] for r in results]))
+        if r["valid"] is False:
+            print("      ->", r.get("msg", ""))
+   
+    counts = collections.Counter(r["status"] for r in results)
+    print("-" * 50)
+    print("Tong:", ", ".join(f"{k}={v}" for k, v in counts.items()))
+    
     
 
 
