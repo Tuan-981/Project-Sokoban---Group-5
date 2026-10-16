@@ -9,7 +9,7 @@ from sokoban import sokoban_goal_state
 
 # ===== VÙNG 1: Tiện ích chung và thống kê (C) =====
 # (Dành cho việc đo đạc, thống kê node mở rộng / thời gian ở các tuần tiếp theo)
-# Thống kê lần chạy gần nhất; không làm thay đổi API của solve().
+# Thống kê lần chạy gần nhất; không làm thay đổi API của solve(). 
 LAST_STATS = {
     "expanded": 0,   # Số node được lấy khỏi frontier để mở rộng
     "generated": 0,  # Tổng số trạng thái con được sinh ra

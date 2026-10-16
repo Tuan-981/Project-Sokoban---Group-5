@@ -386,7 +386,7 @@ h(PROBLEMS[1]) = 2
 - [ ] Chuẩn bị script profiling bằng `cProfile` sau khi có solver chạy được.
 - [ ] Chạy public tests và ghi kết quả thực tế vào bảng.
 - [ ] Không kết luận A* tốt hơn BFS chỉ từ một test; so sánh trên cùng các map và cùng quy ước đếm.
-## Long — Thống kê BFS và kiểm thử PROBLEMS (16/10/2026)
+## Long —Thống kê BFS và kiểm thử PROBLEMS (16/10/2026)
 
 ### Triển khai trong bản làm việc
 - `solution.py`: dùng `time.perf_counter()` để đo thời gian bên trong `solve()`; giữ nguyên chữ ký `solve(initial_state, timebound=120)`.

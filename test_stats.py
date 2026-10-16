@@ -1,6 +1,7 @@
 import solution
 from sokoban import SokobanState
 
+
 def simple_state(solved=False):
     return SokobanState(
 "START", 0, None, 4, 3, ((0, 1),),

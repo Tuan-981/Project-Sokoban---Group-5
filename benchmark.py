@@ -53,6 +53,7 @@ def main():
     parser.add_argument("--maps", type=int, nargs="*", help="chỉ chạy các map này")
     args = parser.parse_args()
 
+    
     if args.worker is not None:
         run_worker(args.worker, args.timebound)
         return
