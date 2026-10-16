@@ -386,6 +386,52 @@ h(PROBLEMS[1]) = 2
 - [ ] Chuẩn bị script profiling bằng `cProfile` sau khi có solver chạy được.
 - [ ] Chạy public tests và ghi kết quả thực tế vào bảng.
 - [ ] Không kết luận A* tốt hơn BFS chỉ từ một test; so sánh trên cùng các map và cùng quy ước đếm.
+## Long —Thống kê BFS và kiểm thử PROBLEMS (16/10/2026)
+
+### Triển khai trong bản làm việc
+- `solution.py`: dùng `time.perf_counter()` để đo thời gian bên trong `solve()`; giữ nguyên chữ ký `solve(initial_state, timebound=120)`.
+- Bổ sung `LAST_STATS`: `expanded` (node lấy khỏi queue và gọi `successors()`), `generated` (tổng số successor trả về), `unique` (số khóa cấu hình duy nhất được phát hiện), `elapsed` và `status`.
+- Quy ước goal-on-generation vẫn được giữ: node đích được trả về ngay khi sinh; vì thế không tính node đích là expanded.
+- `benchmark.py`: in thêm các cột expanded/generated/unique; vẫn xác thực lời giải bằng `validation.py`.
+- Thêm `profile_solver.py` để xem 20 hàm có `cumtime` cao nhất bằng `cProfile`. Thời gian có profiling không dùng làm số benchmark chính thức.
+
+### Test tích hợp bộ đếm số node mở rộng và thời gian chạy BFS
+- Lệnh: `python -m unittest public_tests.py`, `python test_stats.py`
+
+- Kết quả: **3 tests passed** (`one_box`, `initial_goal`, `zero_budget`).
+            
+            === TEST 1: BFS ===
+            Có lời giải: True
+            Thống kê: {'expanded': 1, 'generated': 3, 'unique': 3, 'elapsed': 4.55999997939216e-05, 'status': 'SOLVED'}
+
+            === TEST 2: TIMEOUT ===
+            Kết quả là False: True
+            Thống kê: {'expanded': 0, 'generated': 0, 'unique': 0, 'elapsed': 1.0999992809956893e-06, 'status': 'TIMEOUT'}
+
+### Kết quả BFS trên `sokoban.PROBLEMS`
+- Lệnh chạy: python benchmark.py --timebound 5 (Lệnh này chạy các map từ 0 đến 19, mỗi map có ngân sách 5 giây.)
+Chạy trong cùng môi trường Python, `timebound=0.1` giây/map. Đây là lần chạy thử nhanh để kiểm tra thống kê, **không phải kết luận hiệu năng cuối cùng**. Các map `TIMEOUT` chưa tìm được lời giải trong ngân sách này.
+
+Map  Status     Steps   Expanded  Generated   Unique   Time(s)  Valid
+------------------------------------------------------------------------------
+0    SOLVED        16      38626     188680    51917     0.580  True
+1    SOLVED         4         56        319      127     0.001  True
+2    SOLVED        21       4136      10887     4629     0.031  True
+3    SOLVED        10       6458      40280    10875     0.300  True
+4    SOLVED         8        928       5877     1498     0.015  True
+5    SOLVED        30     128745     604658   142407     2.056  True
+6    SOLVED        16       5593      27433     7319     0.073  True
+7    SOLVED        41       2308       5652     2346     0.015  True
+8    RUNNING     None     179236    1640795   413694     5.282  -
+9    RUNNING     None     132499    1506895   389413     5.439  -
+10 
+**Lưu ý về timeout:** kiểm tra deadline được thực hiện giữa các lần mở rộng. Một lần gọi `successors()` có thể tốn nhiều thời gian, nên thời gian thực tế đôi khi vượt `timebound` (đặc biệt map 5). Đây là điểm cần ghi nhận khi tối ưu tiếp; không được hiểu timeout 0.1 giây là giới hạn cứng tuyệt đối.
+
+### Nhận xét
+- 7/20 map được giải trong lần chạy nhanh này; cả 7 lời giải đều qua validator.
+- BFS vẫn phù hợp làm baseline đúng đắn nhưng tăng số trạng thái nhanh trên các map khó; cần benchmark lại với ngân sách dài hơn và so sánh A* trên cùng map.
+- `StateSpace.n` không được dùng thay cho `expanded`: nó đếm số đối tượng trạng thái được khởi tạo.
+
 
 ### Chưa hiu / cn hi
 - ...
