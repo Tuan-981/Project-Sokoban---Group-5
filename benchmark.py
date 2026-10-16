@@ -13,11 +13,14 @@ def run_worker(index, timebound):
     final = solution.solve(initial, timebound)
     elapsed = time.time() - start
 
+    stats = dict(solution.LAST_STATS)
     if final is False:
-        result = {"status": "NOSOL", "steps": None, "time": elapsed, "valid": "-"}
+        result = {"status": stats.get("status", "NOSOL"), "steps": None,
+                  "time": elapsed, "valid": "-", **stats}
     else:
         valid, msg = validate_solution(initial, final)
-        result = {"status": "SOLVED", "steps": final.gval, "time": elapsed, "valid": valid, "msg": msg}
+        result = {"status": "SOLVED", "steps": final.gval, "time": elapsed,
+                  "valid": valid, "msg": msg, **stats}
     print("RESULT " + json.dumps(result))
 
 
@@ -59,19 +62,21 @@ def main():
     results = []
 
     # Tiêu đề bảng (in 1 lần, trước vòng lặp)
-    print(f"{'Map':<6}{'Trang thai':<10}{'So buoc':>8}{'Thoi gian':>11}  Validate")
-    print("-" * 50)
+    print(f"{'Map':<5}{'Status':<9}{'Steps':>7}{'Expanded':>11}{'Generated':>11}{'Unique':>9}{'Time(s)':>10}  Valid")
+    print("-" * 78)
 
     for i in maps:
         r = run_one(i, args.timebound)
         results.append(r)
-        print(f"{i:<6}{r['status']:<10}{str(r['steps']):>8}{r['time']:>10.2f}s  {r['valid']}",
+        print(f"{i:<5}{r['status']:<9}{str(r['steps']):>7}"
+              f"{r.get('expanded', '-'):>11}{r.get('generated', '-'):>11}"
+              f"{r.get('unique', '-'):>9}{r['time']:>10.3f}  {r['valid']}",
               flush=True)
         if r["valid"] is False:
             print("      ->", r.get("msg", ""))
    
     counts = collections.Counter(r["status"] for r in results)
-    print("-" * 50)
+    print("-" * 78)
     print("Tong:", ", ".join(f"{k}={v}" for k, v in counts.items()))
     
     
