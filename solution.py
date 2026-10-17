@@ -80,8 +80,12 @@ def solve(initial_state, timebound=120):
     LAST_STATS["unique"] = 1
 
     while frontier:
-        # Kiểm tra giới hạn thời gian ở đầu vòng lặp (theo cách bạn Trâm, tránh overhead trong vòng for)
+    # Kiểm tra giới hạn thời gian ở đầu vòng lặp
         if perf_counter() >= deadline:
+            LAST_STATS.update(
+                elapsed=perf_counter() - started,
+                status="TIMEOUT",  #Khi hết thời gian, hàm trả về False ngay lập tức cập nhật LAST_STATS["status"] từ "RUNNING" thành "TIMEOUT".
+            )
             return False
 
         # Lấy trạng thái ở đầu hàng đợi ra để mở rộng (cơ chế FIFO)
