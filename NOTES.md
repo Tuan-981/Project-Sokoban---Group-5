@@ -409,27 +409,40 @@ h(PROBLEMS[1]) = 2
             Thống kê: {'expanded': 0, 'generated': 0, 'unique': 0, 'elapsed': 1.0999992809956893e-06, 'status': 'TIMEOUT'}
 
 ### Kết quả BFS trên `sokoban.PROBLEMS`
-- Lệnh chạy: python benchmark.py --timebound 5 (Lệnh này chạy các map từ 0 đến 19, mỗi map có ngân sách 5 giây.)
+- Lệnh chạy: `python benchmark.py --timebound 5` (Lệnh này chạy các map từ 0 đến 19, mỗi map có ngân sách 5 giây.)
 Chạy trong cùng môi trường Python, `timebound=0.1` giây/map. Đây là lần chạy thử nhanh để kiểm tra thống kê, **không phải kết luận hiệu năng cuối cùng**. Các map `TIMEOUT` chưa tìm được lời giải trong ngân sách này.
 
 Map  Status     Steps   Expanded  Generated   Unique   Time(s)  Valid
 ------------------------------------------------------------------------------
-0    SOLVED        16      38626     188680    51917     0.580  True
+0    SOLVED        16      38626     188680    51917     0.625  True
 1    SOLVED         4         56        319      127     0.001  True
-2    SOLVED        21       4136      10887     4629     0.031  True
-3    SOLVED        10       6458      40280    10875     0.300  True
-4    SOLVED         8        928       5877     1498     0.015  True
-5    SOLVED        30     128745     604658   142407     2.056  True
-6    SOLVED        16       5593      27433     7319     0.073  True
-7    SOLVED        41       2308       5652     2346     0.015  True
-8    RUNNING     None     179236    1640795   413694     5.282  -
-9    RUNNING     None     132499    1506895   389413     5.439  -
-10 
+2    SOLVED        21       4136      10887     4629     0.037  True
+3    SOLVED        10       6458      40280    10875     0.155  True
+4    SOLVED         8        928       5877     1498     0.022  True
+5    SOLVED        30     128745     604658   142407     2.064  True
+6    SOLVED        16       5593      27433     7319     0.113  True
+7    SOLVED        41       2308       5652     2346     0.016  True
+8    TIMEOUT     None     172852    1578971   400053     5.404  -
+9    TIMEOUT     None     118700    1352690   352767     5.272  -
+10   TIMEOUT     None     173374    1549503   400185     5.349  -
+11   TIMEOUT     None     182300    1656996   381977     5.222  -
+12   TIMEOUT     None     181044    1663570   378601     5.204  -
+13   TIMEOUT     None     242682    1581409   405123     5.219  -
+14   TIMEOUT     None     236291    1529016   402148     5.616  -
+15   TIMEOUT     None     154170    1527962   341112     5.224  -
+16   TIMEOUT     None     168059    1700605   358189     5.255  -
+17   TIMEOUT     None     154848    1546465   328564     5.516  -
+18   TIMEOUT     None     158796    1586552   346430     5.275  -
+19   TIMEOUT     None     154569    1537123   326848     5.224  -
+------------------------------------------------------------------------------
+Tong: SOLVED=8, TIMEOUT=12
+
 **Lưu ý về timeout:** kiểm tra deadline được thực hiện giữa các lần mở rộng. Một lần gọi `successors()` có thể tốn nhiều thời gian, nên thời gian thực tế đôi khi vượt `timebound` (đặc biệt map 5). Đây là điểm cần ghi nhận khi tối ưu tiếp; không được hiểu timeout 0.1 giây là giới hạn cứng tuyệt đối.
 
 ### Nhận xét
 - 7/20 map được giải trong lần chạy nhanh này; cả 7 lời giải đều qua validator.
 - BFS vẫn phù hợp làm baseline đúng đắn nhưng tăng số trạng thái nhanh trên các map khó; cần benchmark lại với ngân sách dài hơn và so sánh A* trên cùng map.
+- từ map 8-19 vẫn TIMEOUT thì đó là kết quả phản ánh giới hạn tìm kiếm của BFS trong ngân sách hiện tại, không còn là lỗi ghi trạng thái như trước. 
 - `StateSpace.n` không được dùng thay cho `expanded`: nó đếm số đối tượng trạng thái được khởi tạo.
 
 
