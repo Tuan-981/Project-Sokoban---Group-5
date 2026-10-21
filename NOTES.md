@@ -440,9 +440,9 @@ Tong: SOLVED=8, TIMEOUT=12
 **Lưu ý về timeout:** kiểm tra deadline được thực hiện giữa các lần mở rộng. Một lần gọi `successors()` có thể tốn nhiều thời gian, nên thời gian thực tế đôi khi vượt `timebound` (đặc biệt map 5). Đây là điểm cần ghi nhận khi tối ưu tiếp; không được hiểu timeout 0.1 giây là giới hạn cứng tuyệt đối.
 
 ### Nhận xét
-- 7/20 map được giải trong lần chạy nhanh này; cả 7 lời giải đều qua validator.
+- 8/20 map được giải trong lần chạy nhanh này; cả 7 lời giải đều qua validator.
 - BFS vẫn phù hợp làm baseline đúng đắn nhưng tăng số trạng thái nhanh trên các map khó; cần benchmark lại với ngân sách dài hơn và so sánh A* trên cùng map.
-- từ map 8-19 vẫn TIMEOUT thì đó là kết quả phản ánh giới hạn tìm kiếm của BFS trong ngân sách hiện tại, không còn là lỗi ghi trạng thái như trước. 
+- Từ map 8-19 vẫn TIMEOUT thì đó là kết quả phản ánh giới hạn tìm kiếm của BFS trong ngân sách hiện tại, không còn là lỗi ghi trạng thái như trước. 
 - `StateSpace.n` không được dùng thay cho `expanded`: nó đếm số đối tượng trạng thái được khởi tạo.
 
 

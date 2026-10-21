@@ -1,0 +1,26 @@
+# baseline_bfs_week1.txt: lưu kết quả benchmark của cả 20 map.
+
+Map  Status     Steps   Expanded  Generated   Unique   Time(s)  Valid
+------------------------------------------------------------------------------
+0    SOLVED        16      38626     188680    51917     0.589  True
+1    SOLVED         4         56        319      127     0.001  True
+2    SOLVED        21       4136      10887     4629     0.032  True
+3    SOLVED        10       6458      40280    10875     0.203  True
+4    SOLVED         8        928       5877     1498     0.017  True
+5    SOLVED        30     128745     604658   142407     2.014  True
+6    SOLVED        16       5593      27433     7319     0.076  True
+7    SOLVED        41       2308       5652     2346     0.015  True
+8    TIMEOUT     None     569501    5244261  1186468    31.458  -
+9    TIMEOUT     None     392487    4494790  1098019    31.786  -
+10   TIMEOUT     None     535537    4856557  1185803    32.805  -
+11   TIMEOUT     None     596742    5473206  1160922    31.500  -
+12   TIMEOUT     None     581070    5347009  1148968    31.448  -
+13   TIMEOUT     None     805944    5222131  1212688    31.482  -
+14   TIMEOUT     None     875430    5619952  1323342    31.409  -
+15   TIMEOUT     None     449421    4481338  1006793    31.218  -
+16   TIMEOUT     None     461291    4681409   960788    30.942  -
+17   TIMEOUT     None     458461    4572392   974733    32.275  -
+18   TIMEOUT     None     440630    4406329   959989    31.143  -
+19   TIMEOUT     None     518691    5165426  1067765    30.828  -
+------------------------------------------------------------------------------
+Tong: SOLVED=8, TIMEOUT=12
