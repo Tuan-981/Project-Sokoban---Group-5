@@ -21,10 +21,199 @@ LAST_STATS = {
 
 # ===== VÙNG 2: Ô chết và bảng khoảng cách (B) =====
 # (Dành cho Tuần 2)
+from collections import deque
+
+def trong_ban_va_trong(state, c):
+    """
+    Kiểm tra ô c có nằm trong bàn cờ và không phải tường hay không.
+
+    state: trạng thái Sokoban ban đầu.
+    c: tọa độ ô, có dạng (x, y).
+
+    Trả về:
+        True nếu ô nằm trong bàn và không phải tường.
+        False nếu ô nằm ngoài bàn hoặc là tường.
+    """
+    x, y = c
+
+    # Kiểm tra tọa độ nằm trong giới hạn bàn cờ
+    if not (0 <= x < state.width and 0 <= y < state.height):
+        return False
+
+    # Kiểm tra ô có phải tường hay không
+    if c in state.obstacles:
+        return False
+
+    return True
+
+
+def bfs_nguoc(state, g):
+    """
+    BFS ngược từ một ô đích g để tính khoảng cách đẩy
+    từ các ô khác đến g.
+
+    dist[c] là số lần đẩy ít nhất để đưa một thùng
+    từ ô c đến đích g, xét các điều kiện đẩy hợp lệ.
+
+    Lưu ý:
+        Không sử dụng vị trí robot hoặc vị trí thùng hiện tại
+        làm tường.
+    """
+    # Khoảng cách từ đích đến chính nó bằng 0
+    dist = {g: 0}
+
+    # Hàng đợi BFS
+    queue = deque([g])
+
+    # Bốn hướng di chuyển: lên, xuống, trái, phải
+    directions = [
+        (0, -1),
+        (0, 1),
+        (-1, 0),
+        (1, 0)
+    ]
+
+    while queue:
+        # Ô hiện tại đang xét
+        c = queue.popleft()
+        x, y = c
+
+        for dx, dy in directions:
+            # p: vị trí trước đó của thùng
+            # r: vị trí robot cần đứng để đẩy thùng từ p đến c
+            p = (x - dx, y - dy)
+            r = (x - 2 * dx, y - 2 * dy)
+
+            # Cả vị trí thùng trước đó và vị trí robot
+            # đều phải nằm trong bàn và không phải tường
+            if not trong_ban_va_trong(state, p):
+                continue
+
+            if not trong_ban_va_trong(state, r):
+                continue
+
+            # Nếu đã thăm ô p thì không thêm lại
+            if p in dist:
+                continue
+
+            # Khoảng cách đến đích tăng thêm một lần đẩy
+            dist[p] = dist[c] + 1
+
+            # Đưa ô mới vào hàng đợi
+            queue.append(p)
+
+    return dist
+
+
+def tinh_bang(initial_state):
+    """
+    Tạo ba cấu trúc dữ liệu:
+
+    dist:
+        Bảng khoảng cách riêng từ từng ô đến từng đích.
+        Dùng cho heuristic nâng cao sau này.
+
+    dist_to_goal:
+        Khoảng cách đẩy nhỏ nhất từ mỗi ô đến một đích bất kỳ.
+
+    dead:
+        Tập các ô không phải tường nhưng không thể đẩy thùng
+        từ đó đến bất kỳ đích nào.
+    """
+
+    # Bảng khoảng cách riêng cho từng đích
+    dist = {}
+
+    for goal in initial_state.storage:
+        dist[goal] = bfs_nguoc(initial_state, goal)
+
+    # Khoảng cách ngắn nhất từ mỗi ô đến một đích bất kỳ
+    dist_to_goal = {}
+
+    for goal_distances in dist.values():
+        for cell, distance in goal_distances.items():
+
+            # Chưa có khoảng cách thì thêm vào
+            if cell not in dist_to_goal:
+                dist_to_goal[cell] = distance
+
+            # Nếu đã có, giữ khoảng cách nhỏ hơn
+            elif distance < dist_to_goal[cell]:
+                dist_to_goal[cell] = distance
+
+    # Tìm các ô chết
+    dead = set()
+
+    for x in range(initial_state.width):
+        for y in range(initial_state.height):
+            cell = (x, y)
+
+            # Tường không được xem là ô chết
+            if cell in initial_state.obstacles:
+                continue
+
+            # Ô trống không thể đi đến bất kỳ đích nào
+            # được xem là dead square
+            if cell not in dist_to_goal:
+                dead.add(cell)
+
+    return dist, dist_to_goal, dead
 
 
 # ===== VÙNG 3: Các hàm Heuristic (B) =====
 # (Dành cho Tuần 2)
+
+# Giá trị rất lớn, dùng để biểu thị trạng thái không thể giải
+INF = 10**9
+
+
+def make_heuristic(initial_state):
+    """
+    Tạo heuristic h1 cho thuật toán tìm kiếm Sokoban.
+
+    h1(s) = tổng khoảng cách đẩy ngắn nhất từ mỗi thùng
+            đến một đích gần nhất.
+
+    Nếu có thùng nằm ở ô chết, trả về INF.
+
+    Không sửa đổi trạng thái s.
+    """
+
+    # Tạo bảng khoảng cách và tập ô chết từ trạng thái ban đầu
+    dist, dist_to_goal, dead = tinh_bang(initial_state)
+
+    # Bộ nhớ đệm kết quả heuristic
+    cache = {}
+
+    def h(s):
+        # Chỉ sử dụng vị trí các thùng, không xét vị trí robot
+        boxes = s.boxes
+
+        # Chuẩn hóa thành tuple để dùng làm khóa,
+        # kể cả khi s.boxes là set
+        key = tuple(sorted(boxes))
+
+        # Nếu đã tính trước đó thì dùng lại kết quả
+        if key in cache:
+            return cache[key]
+
+        total = 0
+
+        for box in boxes:
+            # Thùng không thể đến bất kỳ đích nào
+            if box not in dist_to_goal:
+                total = INF
+                break
+
+            # Cộng khoảng cách đẩy ngắn nhất đến một đích
+            total += dist_to_goal[box]
+
+        # Lưu kết quả để tránh tính lại
+        cache[key] = total
+
+        return total
+
+    return h
 
 
 # ===== VÙNG 4: Thuật toán tìm kiếm A* / Weighted A* (A) =====
