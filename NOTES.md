@@ -446,6 +446,54 @@ Tong: SOLVED=8, TIMEOUT=12
 - `StateSpace.n` không được dùng thay cho `expanded`: nó đếm số đối tượng trạng thái được khởi tạo.
 
 
-### Chưa hiu / cn hi
+### Chưa hiểu / cần hỏi
 - ...
+
 ### Việc tuần sau (người - hạn)
+- Tuần 2: A (Tuấn) và B (Hải Anh) hoàn thành A* và Heuristic h1 theo biên bản thiết kế bên dưới.
+
+## Tuần 2 — Thống nhất thiết kế giữa A và B: A* và Heuristic Admissible
+**Ngày cập nhật:** 19/10/2026 (Họp kỹ thuật Thứ 2)  
+**Thành viên tham gia:** Người A (Hồ Anh Tuấn) và Người B (Nghiêm Nguyễn Hải Anh)
+
+### 1. Mục tiêu và Nguyên tắc làm việc
+- **Mục tiêu:** Nâng cấp baseline từ BFS lên A* để tìm lời giải tối ưu (số bước bằng BFS) nhưng giảm mạnh số lượng node mở rộng; kiểm chứng đúng đắn trên 8 map đầu tiên (PROBLEMS[0..7]).
+- **Làm việc song song, không nghẽn:** A viết khung A* với heuristic mặc định h = 0. B viết hàm ô chết và khoảng cách độc lập, kiểm tra bằng script riêng.
+- **Phân chia vùng code trong solution.py (Tránh conflict):**
+  - **B phụ trách:** Vùng 2 (Ô chết và bảng khoảng cách) & Vùng 3 (Các hàm Heuristic).
+  - **A phụ trách:** Vùng 4 (Thuật toán A*) & Vùng 5 (Hàm solve() và quản lý thời gian).
+- **Quy ước nhánh Git:**
+  - Nhánh của A: feature/astar-tuan
+  - Nhánh của B: feature/dead-squares-HaiAnh
+  - Nhánh tích hợp chung (Thứ 5): feature/tich-hop-h1
+
+---
+
+### 2. Biên bản 8 điểm thống nhất kỹ thuật (Giao diện giữa A và B)
+
+1. **Chữ ký hàm và Cơ chế tính trước (Precompute):**
+   - B cung cấp hàm make_heuristic(initial_state) trả về một hàm closure h(s) -> int.
+   - Bảng khoảng cách và danh sách ô chết được tính **đúng 1 lần duy nhất** ở đầu hàm solve(). Trong vòng lặp A*, A chỉ cần gọi h(s) để tra cứu nhanh O(1).
+2. **Quy ước vô nghiệm và Ô chết (Dead squares):**
+   - Khai báo hằng số INF = 10**9 ở Vùng 3.
+   - Nếu bất kỳ thùng nào rơi vào ô chết hoặc không thể đến đích, h(s) trả về giá trị >= INF.
+   - Phía A: Bỏ qua ngay lập tức mọi node con có h >= INF (cắt tỉa nhánh chết, không đẩy vào hàng đợi).
+3. **Cắt trạng thái ban đầu:**
+   - Nếu trạng thái xuất phát (initial_state) có h >= INF, hàm solve() trả về False ngay lập tức mà không cần khởi động tìm kiếm.
+4. **An toàn dữ liệu:**
+   - Hàm h(s) chỉ đọc vị trí các thùng (s.boxes), không xét vị trí 
+obots, và tuyệt đối **không làm biến đổi (read-only)** đối tượng trạng thái s.
+5. **Cơ chế Cache:**
+   - Bảng nhớ tạm (cache) của heuristic được đặt trong phạm vi closure, sử dụng khóa là cấu hình thùng s.boxes, không dùng biến toàn cục ngoài module.
+6. **Chuẩn thuật toán A* của A:**
+   - **Goal test khi pop:** Chỉ kiểm tra trạng thái đích khi lấy node ra khỏi hàng đợi ưu tiên heapq (không kiểm tra khi sinh con như BFS).
+   - **Bộ đếm tie-break:** Hàng đợi lưu tuple (f, tie_counter, state) để tránh lỗi so sánh trực tiếp giữa hai đối tượng SokobanState khi có cùng giá trị f.
+   - **Quản lý thời gian:** Kiểm tra perf_counter() >= deadline ở đầu mỗi vòng lặp while heap.
+7. **Bài kiểm tra đối chứng chung (h = 0):**
+   - Khi chạy A* với h = 0, số bước tìm được của A* **phải bằng chính xác 100% số bước của BFS** trên các map giải được trong tuần 1:
+     - Map 0: 16 bước | Map 1: 4 bước | Map 2: 21 bước | Map 3: 10 bước
+     - Map 4: 8 bước  | Map 5: 30 bước | Map 6: 16 bước | Map 7: 41 bước
+8. **Kế hoạch bàn giao và Review chéo:**
+   - Thứ 4: A mở PR cho A* (h = 0); B mở PR cho Ô chết và Bảng khoảng cách.
+   - Review chéo: B review PR của A, C review PR của B theo đúng quy định sổ tay.
+   - Thứ 5: A và B cùng ngồi ghép h1 vào A* trên nhánh tích hợp.
