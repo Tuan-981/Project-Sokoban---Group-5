@@ -216,6 +216,89 @@ def make_heuristic(initial_state):
     return h
 
 
+def make_heuristic_h2(initial_state):
+    """
+    Tạo heuristic h2 cho thuật toán tìm kiếm Sokoban.
+
+    h2(s) = tổng khoảng cách đẩy nhỏ nhất khi ghép mỗi thùng
+            với một đích khác nhau (mỗi đích dùng tối đa một lần).
+
+    Tìm phép ghép tối ưu bằng quy hoạch động bitmask trên tập đích đã dùng.
+    Trả về INF nếu không có phép ghép hữu hạn.
+
+    Không sửa đổi trạng thái s.
+    """
+
+    # tinh_bang trả về ba giá trị; h2 chỉ cần dist (bảng riêng từng đích)
+    dist, dist_to_goal, dead = tinh_bang(initial_state)
+
+    # Danh sách các đích, mỗi đích ứng với một bit trong mask
+    goals = list(dist.keys())
+    ng = len(goals)
+    full = 1 << ng
+
+    # popcount[mask] = số bit 1 = số thùng đã được ghép
+    popcount = [bin(m).count("1") for m in range(full)]
+
+    # Bộ nhớ đệm kết quả heuristic
+    cache = {}
+
+    def h(s):
+        boxes = s.boxes
+        key = tuple(sorted(boxes))
+
+        if key in cache:
+            return cache[key]
+
+        box_list = list(key)
+        n = len(box_list)
+
+        # Nhiều thùng hơn đích thì không thể ghép 1-1
+        if n > ng:
+            cache[key] = INF
+            return INF
+
+        # cost[i][j] = khoảng cách đẩy từ thùng i đến đích j
+        cost = [[dist[g].get(b, INF) for g in goals] for b in box_list]
+
+        # dp[mask] = tổng nhỏ nhất khi các đích trong mask
+        # đã được ghép cho popcount[mask] thùng đầu tiên
+        dp = [INF] * full
+        dp[0] = 0
+
+        for mask in range(full):
+            cur = dp[mask]
+            if cur >= INF:
+                continue
+
+            i = popcount[mask]  # thùng kế tiếp cần ghép
+            if i >= n:
+                continue
+
+            for j in range(ng):
+                if (mask >> j) & 1:
+                    continue  # đích j đã dùng
+
+                c = cost[i][j]
+                if c >= INF:
+                    continue  # thùng i không tới được đích j
+
+                nm = mask | (1 << j)
+                v = cur + c
+                if v < dp[nm]:
+                    dp[nm] = v
+
+        # Lấy phép ghép tốt nhất trong các mask đã ghép đủ n thùng
+        best = min((dp[m] for m in range(full) if popcount[m] == n), default=INF)
+        result = best if best < INF else INF
+
+        cache[key] = result
+        return result
+
+    return h
+
+
+
 # ===== VÙNG 4: Thuật toán tìm kiếm A* / Weighted A* (A) =====
 # (Dành cho Tuần 2 và Tuần 3)
 

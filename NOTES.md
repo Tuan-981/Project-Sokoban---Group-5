@@ -497,3 +497,7 @@ obots, và tuyệt đối **không làm biến đổi (read-only)** đối tư�
    - Thứ 4: A mở PR cho A* (h = 0); B mở PR cho Ô chết và Bảng khoảng cách.
    - Review chéo: B review PR của A, C review PR của B theo đúng quy định sổ tay.
    - Thứ 5: A và B cùng ngồi ghép h1 vào A* trên nhánh tích hợp.
+ 
+
+ ###-<H Anh>-24/10/2026. Chứng minh admissible
+   h2 là admissible. Mỗi bước đẩy dời đúng một thùng đi một ô, nên chi phí thật chỉ tính theo số lần đẩy. Với mỗi thùng, dist[g][ô] là số lần đẩy tối thiểu tới đích g khi bỏ qua mọi vật cản khác ngoài tường, nên không thể lớn hơn chi phí thật của thùng đó. Trong lời giải thật, các thùng cuối cùng nằm ở các đích khác nhau, tức là một phép ghép cặp 1–1 giữa thùng và đích. Tổng số lần đẩy thật của phép ghép đó ≥ tổng dist của chính phép ghép đó ≥ tổng nhỏ nhất trong mọi phép ghép, chính là h2. Vậy h2 ≤ chi phí thật. Hơn nữa h1 cho phép nhiều thùng cùng chọn một đích gần nhất, tập lựa chọn của h1 lớn hơn nên h1 ≤ h2.
