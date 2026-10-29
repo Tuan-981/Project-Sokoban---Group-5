@@ -1,16 +1,17 @@
 """Student entry point. See README.md for the API and scoring rules.
 
-Tuần 2: Nâng cấp baseline sang thuật toán A* (Người A - Tuấn phụ trách Vùng 4, 5).
-Hỗ trợ tích hợp Heuristic h1 / h2 và cắt tỉa ô chết (Người B - Hải Anh phụ trách Vùng 2, 3).
+Tuần 2: Bản tích hợp hoàn chỉnh đỉnh cao:
+  - Thuật toán tìm kiếm A* (Người A - Hồ Anh Tuấn phụ trách Vùng 4, 5).
+  - Ô chết (Dead squares) & Heuristic h2 Ghép cặp Bitmask DP tối ưu (Người B - Nghiêm Nguyễn Hải Anh phụ trách Vùng 2, 3).
 """
 import heapq
 import itertools
+from collections import deque
 from time import perf_counter
 from sokoban import sokoban_goal_state
 
 
 # ===== VÙNG 1: Tiện ích chung và thống kê (C) =====
-# Thống kê lần chạy gần nhất; không làm thay đổi API của solve().
 LAST_STATS = {
     "expanded": 0,   # Số node được lấy khỏi frontier để mở rộng
     "generated": 0,  # Tổng số trạng thái con được sinh ra
@@ -20,126 +21,268 @@ LAST_STATS = {
 }
 
 
-# ===== VÙNG 2: Ô chết và bảng khoảng cách (B) =====
-# (Người B - Hải Anh sẽ viết các hàm tính dead squares và BFS ngược khoảng cách tại đây)
+# ===== VÙNG 2: Ô chết và bảng khoảng cách (B - Hải Anh) =====
+
+def trong_ban_va_trong(state, c):
+    """
+    Kiểm tra ô c có nằm trong bàn cờ và không phải tường hay không.
+    """
+    x, y = c
+    if not (0 <= x < state.width and 0 <= y < state.height):
+        return False
+    if c in state.obstacles:
+        return False
+    return True
 
 
-# ===== VÙNG 3: Các hàm Heuristic (B) =====
-# Hằng số đại diện cho vô cùng lớn (trạng thái vô nghiệm / rơi vào ô chết)
+def bfs_nguoc(state, g):
+    """
+    BFS ngược từ một ô đích g để tính khoảng cách đẩy từ các ô khác đến g.
+    dist[c] là số lần đẩy ít nhất để đưa một thùng từ ô c đến đích g.
+    """
+    dist = {g: 0}
+    queue = deque([g])
+    directions = [
+        (0, -1),
+        (0, 1),
+        (-1, 0),
+        (1, 0)
+    ]
+
+    while queue:
+        c = queue.popleft()
+        x, y = c
+
+        for dx, dy in directions:
+            # p: vị trí trước đó của thùng
+            # r: vị trí robot cần đứng để đẩy thùng từ p đến c
+            p = (x - dx, y - dy)
+            r = (x - 2 * dx, y - 2 * dy)
+
+            if not trong_ban_va_trong(state, p):
+                continue
+            if not trong_ban_va_trong(state, r):
+                continue
+            if p in dist:
+                continue
+
+            dist[p] = dist[c] + 1
+            queue.append(p)
+
+    return dist
+
+
+def tinh_bang(initial_state):
+    """
+    Tạo ba cấu trúc dữ liệu:
+      - dist: Bảng khoảng cách riêng từ từng ô đến từng đích.
+      - dist_to_goal: Khoảng cách đẩy nhỏ nhất từ mỗi ô đến một đích bất kỳ.
+      - dead: Tập các ô chết (không thể đẩy thùng từ đó đến bất kỳ đích nào).
+    """
+    dist = {}
+    for goal in initial_state.storage:
+        dist[goal] = bfs_nguoc(initial_state, goal)
+
+    dist_to_goal = {}
+    for goal_distances in dist.values():
+        for cell, distance in goal_distances.items():
+            if cell not in dist_to_goal or distance < dist_to_goal[cell]:
+                dist_to_goal[cell] = distance
+
+    dead = set()
+    for x in range(initial_state.width):
+        for y in range(initial_state.height):
+            cell = (x, y)
+            if cell in initial_state.obstacles:
+                continue
+            if cell not in dist_to_goal:
+                dead.add(cell)
+
+    return dist, dist_to_goal, dead
+
+
+# ===== VÙNG 3: Các hàm Heuristic (B - Hải Anh) =====
+
 INF = 10**9
 
-def default_heuristic(state):
+
+def make_heuristic(initial_state):
     """
-    Heuristic mặc định h = 0 khi chưa ghép hàm của B.
-    Với h = 0, A* hoạt động tương đương thuật toán Dijkstra/BFS tối ưu số bước.
+    Heuristic h1: Tổng khoảng cách đẩy ngắn nhất từ mỗi thùng đến đích gần nhất.
     """
-    return 0
+    dist, dist_to_goal, dead = tinh_bang(initial_state)
+    cache = {}
+
+    def h(s):
+        boxes = s.boxes
+        key = tuple(sorted(boxes))
+
+        if key in cache:
+            return cache[key]
+
+        total = 0
+        for box in boxes:
+            if box not in dist_to_goal:
+                total = INF
+                break
+            total += dist_to_goal[box]
+
+        cache[key] = total
+        return total
+
+    return h
 
 
-# ===== VÙNG 4: Thuật toán tìm kiếm A* / Weighted A* (A) =====
+def make_heuristic_h2(initial_state):
+    """
+    Heuristic h2: Ghép cặp thùng–đích tối ưu (1-1) bằng Quy hoạch động Bitmask.
+    Mỗi thùng chỉ được vào một ô đích riêng biệt.
+    h2(s) >= h1(s) và hoàn toàn admissible.
+    """
+    dist, dist_to_goal, dead = tinh_bang(initial_state)
+    goals = list(initial_state.storage)
+    ng = len(goals)
+
+    if ng > 16:
+        # Nếu số đích quá lớn, tự động fallback về h1 để tránh bùng nổ bitmask
+        return make_heuristic(initial_state)
+
+    full = 1 << ng
+    popcount = [bin(m).count("1") for m in range(full)]
+    cache = {}
+
+    def h(s):
+        boxes = s.boxes
+        key = tuple(sorted(boxes))
+
+        if key in cache:
+            return cache[key]
+
+        box_list = list(boxes)
+        n = len(box_list)
+
+        # Nếu số thùng nhiều hơn số đích -> Vô nghiệm
+        if n > ng:
+            cache[key] = INF
+            return INF
+
+        # Kiểm tra nhanh: nếu có thùng rơi vào ô chết -> cắt tỉa ngay
+        for b in box_list:
+            if b not in dist_to_goal:
+                cache[key] = INF
+                return INF
+
+        # Ma trận chi phí: cost[i][j] là khoảng cách đẩy từ thùng i tới đích j
+        cost = [[dist[g].get(b, INF) for g in goals] for b in box_list]
+
+        # dp[mask] = tổng khoảng cách nhỏ nhất khi các đích trong mask đã được ghép
+        dp = [INF] * full
+        dp[0] = 0
+
+        for mask in range(full):
+            cur = dp[mask]
+            if cur >= INF:
+                continue
+
+            i = popcount[mask]
+            if i >= n:
+                continue
+
+            for j in range(ng):
+                if (mask >> j) & 1:
+                    continue
+
+                c = cost[i][j]
+                if c >= INF:
+                    continue
+
+                nm = mask | (1 << j)
+                v = cur + c
+                if v < dp[nm]:
+                    dp[nm] = v
+
+        best = min((dp[m] for m in range(full) if popcount[m] == n), default=INF)
+        result = best if best < INF else INF
+
+        cache[key] = result
+        return result
+
+    return h
+
+
+# ===== VÙNG 4: Thuật toán tìm kiếm A* (A - Tuấn) =====
 
 def a_star_search(initial_state, heuristic_fn, timebound, started):
     """
-    Thuật toán tìm kiếm A* chuẩn (Graph-Search A*):
+    Thuật toán tìm kiếm A* chuẩn:
       f(s) = g(s) + h(s)
-    
-    Quy chuẩn cài đặt theo cam kết nhóm:
-      1. Hàng đợi ưu tiên heapq (min-heap) lưu tuple: (f, tie_counter, state)
-      2. Bộ đếm tie_counter tránh lỗi so sánh trực tiếp 2 SokobanState khi cùng f.
-      3. Quản lý chi phí tốt nhất bằng từ điển best_g: {hashable_state: best_gval}.
-      4. Goal test khi POP (lấy node ra khỏi heap) để đảm bảo tính tối ưu.
-      5. Cắt tỉa ngay trạng thái có h >= INF (rơi vào ô chết).
-      6. Đo lường chính xác các chỉ số thống kê expanded, generated, unique.
     """
     global LAST_STATS
     deadline = started + timebound
     tie_counter = itertools.count()
 
-    # Tính heuristic cho trạng thái khởi đầu
     h_init = heuristic_fn(initial_state)
     if h_init >= INF:
-        # Trạng thái đầu đã vô nghiệm (thùng kẹt ô chết từ đầu)
         LAST_STATS.update(elapsed=perf_counter() - started, status="FAILED")
         return False
 
-    # Hàng đợi ưu tiên frontier (min-heap)
-    # Lưu: (f_score, tie_breaker, state)
     frontier = []
     f_init = initial_state.gval + h_init
     heapq.heappush(frontier, (f_init, next(tie_counter), initial_state))
 
-    # Từ điển theo dõi chi phí gval nhỏ nhất từng tìm thấy tới cấu hình (robots, boxes)
     init_key = initial_state.hashable_state()
     best_g = {init_key: initial_state.gval}
     LAST_STATS["unique"] = 1
 
     while frontier:
-        # Kiểm tra giới hạn thời gian ở đầu mỗi vòng lặp
         if perf_counter() >= deadline:
             LAST_STATS.update(elapsed=perf_counter() - started, status="TIMEOUT")
             return False
 
-        # Lấy trạng thái có f(s) nhỏ nhất ra khỏi frontier
         f_val, _, current = heapq.heappop(frontier)
         curr_key = current.hashable_state()
 
-        # Nếu đã tìm thấy một đường đi khác đến trạng thái này với chi phí gval nhỏ hơn, bỏ qua node cũ
         if current.gval > best_g.get(curr_key, current.gval):
             continue
 
-        # Đếm node mở rộng thực tế (expanded)
         LAST_STATS["expanded"] += 1
 
-        # KIỂM TRA ĐÍCH KHI POP (Goal test on POP) - Đảm bảo lời giải tìm thấy đầu tiên là tối ưu
+        # Goal test khi POP
         if sokoban_goal_state(current):
             LAST_STATS.update(elapsed=perf_counter() - started, status="SOLVED")
             return current
 
-        # Sinh các trạng thái con hợp lệ
         successors = current.successors()
         LAST_STATS["generated"] += len(successors)
 
         for child in successors:
             child_key = child.hashable_state()
 
-            # Nếu đường đi mới không tốt hơn đường đã biết, không duyệt
             if child_key in best_g and child.gval >= best_g[child_key]:
                 continue
 
-            # Tính heuristic cho trạng thái con
             h_val = heuristic_fn(child)
 
-            # CẮT TỈA Ô CHẾT: Thùng rơi vào ô chết hoặc nhánh bế tắc -> bỏ qua ngay
+            # Cắt tỉa trạng thái rơi vào ô chết hoặc không có cách ghép hợp lệ
             if h_val >= INF:
                 continue
 
-            # Ghi nhận trạng thái mới hoặc đường đi ngắn hơn tới trạng thái cũ
             if child_key not in best_g:
                 LAST_STATS["unique"] += 1
             best_g[child_key] = child.gval
 
-            # Tính f(child) = g(child) + h(child) và đưa vào frontier
             f_child = child.gval + h_val
             heapq.heappush(frontier, (f_child, next(tie_counter), child))
 
-    # Duyệt hết không gian trạng thái mà không có đường tới đích -> Vô nghiệm
     LAST_STATS.update(elapsed=perf_counter() - started, status="FAILED")
     return False
 
 
-# ===== VÙNG 5: Hàm solve() và quản lý thời gian (A) =====
+# ===== VÙNG 5: Hàm solve() và quản lý thời gian (A - Tuấn) =====
 
 def solve(initial_state, timebound=120):
     """
-    Entry point giải Sokoban bằng thuật toán A*.
-
-    Args:
-        initial_state: Trạng thái xuất phát (SokobanState) - chỉ đọc.
-        timebound: Giới hạn thời gian (giây).
-
-    Returns:
-        SokobanState: Trạng thái đích với chuỗi parent hợp lệ.
-        False: Nếu timeout hoặc vô nghiệm.
+    Entry point giải Sokoban bằng A* kết hợp Heuristic h2 Ghép cặp Bitmask DP.
     """
     global LAST_STATS
     started = perf_counter()
@@ -151,12 +294,10 @@ def solve(initial_state, timebound=120):
         "status": "RUNNING",
     }
 
-    # Hết thời gian ngay từ đầu hoặc timebound không hợp lệ -> trả về False
     if timebound <= 0:
         LAST_STATS.update(elapsed=perf_counter() - started, status="TIMEOUT")
         return False
 
-    # Trường hợp đặc biệt: Trạng thái đầu đã là đích
     if sokoban_goal_state(initial_state):
         LAST_STATS.update(
             unique=1,
@@ -165,10 +306,7 @@ def solve(initial_state, timebound=120):
         )
         return initial_state
 
-    # Khởi tạo hàm heuristic:
-    # Ở giai đoạn hiện tại (trước khi B ghép h1), dùng default_heuristic (h = 0)
-    # Sau này Thứ 5 chỉ cần đổi dòng này thành: heuristic_fn = make_heuristic(initial_state)
-    heuristic_fn = default_heuristic
+    # KÍCH HOẠT HEURISTIC h2 (Ghép cặp 1-1 tối ưu)
+    heuristic_fn = make_heuristic_h2(initial_state)
 
-    # Gọi thuật toán A* tìm kiếm
     return a_star_search(initial_state, heuristic_fn, timebound, started)
