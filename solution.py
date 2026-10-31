@@ -207,7 +207,138 @@ def make_heuristic_h2(initial_state):
         cache[key] = result
         return result
 
-    return h
+    return h 
+
+# ----- TUẦN 3 (B - Hải Anh): h_admissible / h_fast và ô chết khối 2x2 -----
+
+def tinh_bang_di_bo(initial_state):
+    """
+    Bảng khoảng cách ĐI BỘ giữa các ô trống (chỉ xét tường, bỏ qua thùng và robot).
+    walk[a][b] = số bước đi bộ ít nhất từ ô a đến ô b.
+    Vì bỏ qua thùng nên walk[a][b] <= khoảng cách đi bộ thật -> là cận dưới.
+    Tính 1 lần ở đầu solve(); bàn tối đa 8x8 nên chỉ ~64 lần BFS.
+    """
+    w, h = initial_state.width, initial_state.height
+    walls = initial_state.obstacles
+    walk = {}
+    for x in range(w):
+        for y in range(h):
+            start = (x, y)
+            if start in walls:
+                continue
+            dist = {start: 0}
+            queue = deque([start])
+            while queue:
+                cx, cy = queue.popleft()
+                for dx, dy in ((0, -1), (0, 1), (-1, 0), (1, 0)):
+                    nxt = (cx + dx, cy + dy)
+                    if nxt in dist:
+                        continue
+                    if not (0 <= nxt[0] < w and 0 <= nxt[1] < h):
+                        continue
+                    if nxt in walls:
+                        continue
+                    dist[nxt] = dist[(cx, cy)] + 1
+                    queue.append(nxt)
+            walk[start] = dist
+    return walk
+
+
+def lam_ham_khoi_2x2(initial_state):
+    """
+    Trả về hàm ket_2x2(boxes) -> True nếu có BẾ TẮC khối 2x2.
+    Bế tắc: một khối 2x2 mà cả 4 ô đều là tường / ngoài bàn / thùng,
+    và có ít nhất 1 thùng trong khối KHÔNG nằm trên ô đích.
+    Khi đó các thùng trong khối chặn lẫn nhau, không ai đẩy được nữa.
+    Khối toàn thùng đã nằm trên đích thì KHÔNG phải bế tắc.
+    Robot không tính là vật chặn vì robot di chuyển được.
+    """
+    w, h = initial_state.width, initial_state.height
+    walls = initial_state.obstacles
+    storage = initial_state.storage
+
+    def bi_chan(c, boxes):
+        x, y = c
+        return (not (0 <= x < w and 0 <= y < h)) or c in walls or c in boxes
+
+    def ket_2x2(boxes):
+        for b in boxes:
+            if b in storage:
+                continue  # chỉ xét quanh thùng CHƯA ở đích
+            bx, by = b
+            for ox, oy in ((0, 0), (-1, 0), (0, -1), (-1, -1)):
+                tx, ty = bx + ox, by + oy  # góc trên-trái của khối chứa b
+                if (bi_chan((tx, ty), boxes) and bi_chan((tx + 1, ty), boxes)
+                        and bi_chan((tx, ty + 1), boxes)
+                        and bi_chan((tx + 1, ty + 1), boxes)):
+                    return True
+        return False
+
+    return ket_2x2
+
+
+def make_heuristics(initial_state, dung_2x2=True):
+    """
+    Giao diện cho A (Tuần 3). Trả về cặp (h_admissible, h_fast), tính bảng 1 lần.
+
+    h_admissible(s): h2 (ghép cặp bitmask) -> ADMISSIBLE, dùng ở pha w = 1.
+    h_fast(s)      : h2 + bước đi bộ của robot -> CÓ THỂ KHÔNG admissible,
+                     chỉ dùng ở các pha w > 1 (tìm nhanh, chấp nhận kém tối ưu).
+
+    Cả hai trả về >= INF nếu trạng thái bế tắc (ô chết, thiếu đích, khối 2x2).
+    Cắt bế tắc không làm mất lời giải vì trạng thái bế tắc vốn vô nghiệm.
+    Chỉ đọc s, không sửa s.
+    """
+    h2 = make_heuristic_h2(initial_state)
+    walk = tinh_bang_di_bo(initial_state)
+    ket_2x2 = lam_ham_khoi_2x2(initial_state) if dung_2x2 else (lambda boxes: False)
+    storage = initial_state.storage
+    w, hh = initial_state.width, initial_state.height
+    walls = initial_state.obstacles
+
+    # Với mỗi ô c: các ô kề c mà robot có thể đứng để đẩy thùng ở c
+    dung = {}
+    for x in range(w):
+        for y in range(hh):
+            c = (x, y)
+            dung[c] = [n for n in ((x, y - 1), (x, y + 1), (x - 1, y), (x + 1, y))
+                       if 0 <= n[0] < w and 0 <= n[1] < hh and n not in walls]
+
+    def h_admissible(s):
+        if ket_2x2(s.boxes):
+            return INF
+        return h2(s)
+
+    def buoc_di_bo(s):
+        """
+        Ước lượng số bước robot phải đi bộ trước lần đẩy đầu tiên:
+        min theo (robot, thùng chưa ở đích) của khoảng cách tới ô kề thùng.
+        Có thể trùng với các bước đẩy đã đếm trong h2 -> không đảm bảo admissible.
+        """
+        best = None
+        for b in s.boxes:
+            if b in storage:
+                continue
+            for r in s.robots:
+                tab = walk.get(r)
+                if tab is None:
+                    continue
+                for n in dung[b]:
+                    d = tab.get(n)
+                    if d is not None and (best is None or d < best):
+                        best = d
+        return 0 if best is None else best
+
+    def h_fast(s):
+        base = h_admissible(s)
+        if base >= INF:
+            return INF
+        return base + buoc_di_bo(s)
+
+    return h_admissible, h_fast
+
+
+
 
 
 # ===== VÙNG 4: Thuật toán tìm kiếm A* (A - Tuấn) =====
