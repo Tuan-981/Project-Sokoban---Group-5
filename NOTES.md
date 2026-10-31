@@ -497,3 +497,99 @@ obots, và tuyệt đối **không làm biến đổi (read-only)** đối tư�
    - Thứ 4: A mở PR cho A* (h = 0); B mở PR cho Ô chết và Bảng khoảng cách.
    - Review chéo: B review PR của A, C review PR của B theo đúng quy định sổ tay.
    - Thứ 5: A và B cùng ngồi ghép h1 vào A* trên nhánh tích hợp.
+
+
+
+### TUẦN 3:
+
+## Tuần 3 — Hải Anh (B): h_admissible, h_fast và ô chết khối 2x2
+
+### Đã làm
+- `solution.py` Vùng 3: thêm `tinh_bang_di_bo`, `lam_ham_khoi_2x2`, `make_heuristics`.
+- `make_heuristics(initial_state)` trả về cặp `(h_admissible, h_fast)`, bảng tính 1 lần, không dùng biến toàn cục.
+- Nhánh: `feature/heuristic-walk-HaiAnh`. Reviewer: C. Hải Anh review PR Weighted A* của A.
+
+### Thiết kế (giao diện với A)
+- `h_admissible(s)` = h2 (ghép cặp bitmask) + cắt khối 2x2. Dùng ở pha w = 1.
+- `h_fast(s)` = `h_admissible(s)` + `buoc_di_bo(s)`. Dùng ở các pha w > 1.
+- Cả hai trả về >= INF khi bế tắc; A bỏ qua node có h >= INF như đã thống nhất Tuần 2.
+- `buoc_di_bo(s)` = min theo (robot, thùng chưa ở đích, ô kề thùng) của khoảng cách đi bộ,
+  tính bằng bảng BFS bỏ qua thùng và robot (chỉ xét tường) nên là cận dưới của đi bộ thật.
+
+### Ô chết khối 2x2
+- Bế tắc khi cả 4 ô của một khối 2x2 là tường / ngoài bàn / thùng và có ít nhất 1 thùng chưa ở đích.
+- Khối toàn thùng đã ở đích thì KHÔNG bế tắc (đã unit test).
+- Robot không tính là vật chặn vì robot di chuyển được.
+- Đây là bế tắc thật (trạng thái vô nghiệm) nên cắt không làm mất lời giải tối ưu, dùng được ở cả pha w = 1.
+
+### Lập luận admissible
+- `h_admissible` = h2 (admissible, đã chứng minh Tuần 2) + cắt bế tắc thật => vẫn admissible.
+- `h_fast` KHÔNG được đảm bảo admissible. Số bước đi bộ trước lần đẩy đầu tiên của một thùng chưa ở đích
+  luôn >= `buoc_di_bo`, nhưng các bước đó có thể là lần đẩy một thùng đã ở đích mà h2 đã đếm
+  (ví dụ h2 ghép thùng đã ở đích sang đích khác rẻ hơn). Khi đó cộng thêm đi bộ là đếm trùng.
+- Thực nghiệm: [ĐIỀN số map ngẫu nhiên đã thử và số lần vi phạm của h_fast, nếu bạn chạy; nếu không chạy thì xóa dòng này].
+- Kết luận: chưa chứng minh được h_fast admissible => chỉ dùng ở w > 1, pha cuối w = 1 dùng h_admissible.
+- Hệ quả nếu h quá cao: A* có thể bỏ qua đường tốt hơn và trả lời giải kém tối ưu.
+
+### Kết quả benchmark (chạy bằng `python scratch_b_tuan3.py`, máy của Hải Anh)
+
+**Pha w = 1:** số bước A* với h_admissible bằng BFS trên cả 8 map (OK). Khối 2x2 giảm node ở 4/8 map.
+
+| Map | BFS (bước) | node h2 cũ | node h_admissible (có 2x2) | node h_admissible (không 2x2) | Giảm nhờ 2x2 |
+|---|---:|---:|---:|---:|---:|
+| 0 | 16 | 9516 | 9016 | 9516 | 5,3% |
+| 1 | 4 | 39 | 39 | 39 | 0% |
+| 2 | 21 | 2044 | 1516 | 2044 | 25,8% |
+| 3 | 10 | 873 | 873 | 873 | 0% |
+| 4 | 8 | 349 | 349 | 349 | 0% |
+| 5 | 30 | 15023 | 13477 | 15023 | 10,3% |
+| 6 | 16 | 739 | 739 | 739 | 0% |
+| 7 | 41 | 1088 | 848 | 1088 | 22,1% |
+
+**Pha w = 3, h2 so với h_fast** (bước / node mở rộng / giây):
+
+| Map | BFS | h2 | h_fast |
+|---|---:|---|---|
+| 0 | 16 | 16 / 202 / 0,046 | 17 / 158 / 0,046 |
+| 1 | 4 | 4 / 14 / 0,003 | 5 / 16 / 0,005 |
+| 2 | 21 | 21 / 195 / 0,030 | 21 / 268 / 0,047 |
+| 3 | 10 | 10 / 163 / 0,045 | 10 / 259 / 0,075 |
+| 4 | 8 | 9 / 118 / 0,028 | 9 / 111 / 0,030 |
+| 5 | 30 | 30 / 269 / 0,050 | 30 / 234 / 0,058 |
+| 6 | 16 | 20 / 173 / 0,035 | 20 / 107 / 0,028 |
+| 7 | 41 | 41 / 439 / 0,054 | 41 / 646 / 0,088 |
+
+- Thời gian mỗi lần gọi heuristic (map 15, 5000 trạng thái): h_admissible 56,2 µs; h_fast 91,1 µs (chậm hơn khoảng 1,6 lần).
+- Nhận xét map nhỏ (0..7): h_fast mở rộng ít node hơn ở map 0, 4, 5, 6 nhưng nhiều node hơn ở map 1, 2, 3, 7;
+  lời giải dài thêm 1 bước ở map 0 và 1. Trên map nhỏ h_fast không cho lợi ích rõ ràng.
+- **Map lớn 8..19, pha w = 3, mỗi map 10 giây** (bước / node mở rộng / giây):
+
+| Map | h2 | h_fast | Nhận xét |
+|---|---|---|---|
+| 8 | 14 / 86 / 0,04 | 14 / 236 / 0,23 | h_fast mở rộng nhiều node hơn |
+| 9 | 24 / 139 / 0,16 | 25 / 501 / 0,40 | nhiều node hơn, dài thêm 1 bước |
+| 10 | 37 / 750 / 0,33 | 36 / 1162 / 0,64 | nhiều node hơn, ngắn hơn 1 bước |
+| 11 | 30 / 374 / 0,15 | 31 / 395 / 0,21 | gần như hòa, dài thêm 1 bước |
+| 12 | 26 / 1361 / 0,50 | 26 / 660 / 0,38 | node giảm khoảng 2 lần |
+| 13 | 29 / 282 / 0,08 | 29 / 168 / 0,06 | node giảm |
+| 14 | 27 / 626 / 0,15 | 27 / 316 / 0,10 | node giảm khoảng 2 lần |
+| 15 | 72 / 17199 / 5,40 | 74 / 3534 / 1,81 | node giảm khoảng 4,9 lần, thời gian giảm khoảng 3 lần, dài thêm 2 bước |
+| 16 | 56 / 16527 / 5,37 | 58 / 4006 / 1,87 | node giảm khoảng 4,1 lần, thời gian giảm khoảng 2,9 lần, dài thêm 2 bước |
+| 17 | TIMEOUT / 30073 / 10,00 | TIMEOUT / 20511 / 10,00 | cả hai chưa giải trong 10 giây trên máy này |
+| 18 | TIMEOUT / 27551 / 10,00 | TIMEOUT / 22002 / 10,00 | cả hai chưa giải trong 10 giây trên máy này |
+| 19 | 78 / 5443 / 1,78 | 78 / 3756 / 2,03 | node giảm khoảng 1,4 lần nhưng thời gian chậm hơn nhẹ |
+
+- Tổng: cả hai heuristic đều giải được 10/12 map lớn trong 10 giây trên máy của Hải Anh.
+- h_fast có lợi rõ ở các map khó vừa (12, 13, 14, 15, 16): ít node hơn và nhanh hơn ở map 15, 16.
+- h_fast làm tệ ở các map dễ (8, 9, 10): mở rộng nhiều node hơn, vì thành phần đi bộ làm lệch thứ tự ưu tiên.
+- Kết luận tạm: h_fast đáng giữ cho pha w > 1 vì lợi ở map khó lớn hơn thiệt ở map dễ,
+  nhưng đổi lại có thể dài thêm 1-2 bước ở pha này; pha w = 1 sẽ cải thiện lại nếu còn thời gian.
+- Đánh đổi: h_fast tốn thêm thời gian mỗi lần gọi; chỉ đáng dùng nếu giảm đủ node ở map khó.
+  Quyết định giữ hay bỏ sẽ chốt ở họp Chủ nhật dựa trên bảng map lớn.
+
+### Quyết định và lý do
+- Giữ khối 2x2 trong cả hai hàm vì là bế tắc thật và giảm node ở một số map.
+- Phương án bị loại: cộng bước đi bộ cho TỪNG thùng (đếm trùng nặng, dễ vượt chi phí thật).
+- Phương án bị loại: BFS đi bộ có tính thùng làm vật cản mỗi lần gọi h (quá chậm).
+
+
