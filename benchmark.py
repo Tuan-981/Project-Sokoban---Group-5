@@ -13,7 +13,7 @@ def run_worker(index, timebound):
     final = solution.solve(initial, timebound)
     elapsed = time.time() - start
 
-    stats = dict(solution.LAST_STATS)
+    stats = dict(getattr(solution, "LAST_STATS", {}))
     if final is False:
         result = {"status": stats.get("status", "NOSOL"), "steps": None,
                   "time": elapsed, "valid": "-", **stats}
@@ -46,11 +46,25 @@ def run_one(index, timebound):
             "valid": "-", "msg": ""}
 
 
+def to_markdown(maps, results):
+    """Biến danh sách kết quả thành bảng Markdown."""
+    lines = [
+        "| Map | Trạng thái | Số bước | Thời gian (s) | Validate |",
+        "|-----|------------|---------|---------------|----------|",
+    ]
+    for i, r in zip(maps, results):
+        steps = "-" if r["steps"] is None else r["steps"]
+        lines.append(f"| {i} | {r['status']} | {steps} | {r['time']:.2f} | {r['valid']} |")
+    return "\n".join(lines)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--worker", type=int)
     parser.add_argument("--timebound", type=float, default=30)
     parser.add_argument("--maps", type=int, nargs="*", help="chỉ chạy các map này")
+    parser.add_argument("--md", action="store_true", help="in thêm bảng Markdown")
+    parser.add_argument("--out", type=str, default=None, help="ghi bảng Markdown vào file này")
     args = parser.parse_args()
 
     
@@ -79,6 +93,15 @@ def main():
     counts = collections.Counter(r["status"] for r in results)
     print("-" * 78)
     print("Tong:", ", ".join(f"{k}={v}" for k, v in counts.items()))
+
+    if args.md:
+        md = to_markdown(maps, results)
+        print()
+        print(md)
+        if args.out:
+            with open(args.out, "w", encoding="utf-8") as f:
+                f.write(md + "\n")
+            print("Da ghi:", args.out)
     
     
 
