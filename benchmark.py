@@ -1,10 +1,10 @@
 """Benchmark Sokoban: mỗi map chạy trong một tiến trình mới có timeout."""
-import argparse, collections, json, os, subprocess, sys, time
+import argparse, collections, json, os, subprocess, sys, time 
 
-
-def run_worker(index, timebound):
+def run_worker(index, timebound, solver):
     """Chạy TRONG tiến trình con: giải map số index, in 1 dòng RESULT."""
-    import solution
+    import importlib
+    solution = importlib.import_module(solver)
     from sokoban import PROBLEMS
     from validation import validate_solution
 
@@ -24,10 +24,10 @@ def run_worker(index, timebound):
     print("RESULT " + json.dumps(result))
 
 
-def run_one(index, timebound):
+def run_one(index, timebound, solver):
     """Chạy 1 map trong tiến trình con, trả về dict kết quả."""
     cmd = [sys.executable, __file__, "--worker", str(index),
-           "--timebound", str(timebound)]
+           "--timebound", str(timebound), "--solver", solver]
     start = time.time()
     try:
         p = subprocess.run(cmd, capture_output=True, text=True,
@@ -47,14 +47,31 @@ def run_one(index, timebound):
 
 
 def to_markdown(maps, results):
-    """Biến danh sách kết quả thành bảng Markdown."""
-    lines = [
-        "| Map | Trạng thái | Số bước | Thời gian (s) | Validate |",
-        "|-----|------------|---------|---------------|----------|",
-    ]
+    """Biến kết quả thành bảng Markdown, căn cột thẳng hàng."""
+    header = ["Map", "Status", "Steps", "Expanded", "Generated", "Unique", "Time (s)", "Valid"]
+    right = {2, 3, 4, 5, 6}  # các cột số: căn phải
+
+    rows = []
     for i, r in zip(maps, results):
         steps = "-" if r["steps"] is None else r["steps"]
-        lines.append(f"| {i} | {r['status']} | {steps} | {r['time']:.2f} | {r['valid']} |")
+        rows.append([
+            str(i), str(r["status"]), str(steps),
+            str(r.get("expanded", "-")), str(r.get("generated", "-")),
+            str(r.get("unique", "-")), f"{r['time']:.2f}", str(r["valid"]),
+        ])
+
+    widths = [max([len(header[c])] + [len(row[c]) for row in rows])
+              for c in range(len(header))]
+
+    def fmt(cells):
+        out = [cell.rjust(widths[c]) if c in right else cell.ljust(widths[c])
+               for c, cell in enumerate(cells)]
+        return "| " + " | ".join(out) + " |"
+
+    sep = ["-" * (widths[c] - 1) + ":" if c in right else "-" * widths[c]
+           for c in range(len(header))]
+    lines = [fmt(header), "| " + " | ".join(sep) + " |"]
+    lines += [fmt(row) for row in rows]
     return "\n".join(lines)
 
 
@@ -65,11 +82,12 @@ def main():
     parser.add_argument("--maps", type=int, nargs="*", help="chỉ chạy các map này")
     parser.add_argument("--md", action="store_true", help="in thêm bảng Markdown")
     parser.add_argument("--out", type=str, default=None, help="ghi bảng Markdown vào file này")
+    parser.add_argument("--solver", type=str, default="solution")
     args = parser.parse_args()
 
     
     if args.worker is not None:
-        run_worker(args.worker, args.timebound)
+        run_worker(args.worker, args.timebound, args.solver)
         return
 
 
@@ -81,7 +99,7 @@ def main():
     print("-" * 78)
 
     for i in maps:
-        r = run_one(i, args.timebound)
+        r = run_one(i, args.timebound, args.solver)
         results.append(r)
         print(f"{i:<5}{r['status']:<9}{str(r['steps']):>7}"
               f"{r.get('expanded', '-'):>11}{r.get('generated', '-'):>11}"
