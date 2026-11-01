@@ -683,3 +683,153 @@ Trong tuần 2, thành viên C đã thực hiện:
 - Ghi nhận thời gian chạy trung bình giảm khoảng 15.7% trên Map 0 và 21.1% trên Map 14 so với số liệu trước tối ưu đã có.
 
 **Đánh giá:** Cải tiến `new_boxes` giúp giảm chi phí xử lý khi sinh trạng thái mà không thay đổi quy tắc hoạt động của Sokoban.
+##7 . Tối ưu A* bằng chiến lược Tie-break theo h
+
+### 7.1. Mục tiêu
+
+Cải thiện hiệu năng thuật toán A* bằng cách thay đổi chiến lược lựa chọn trạng thái khi có nhiều trạng thái cùng giá trị hàm đánh giá `f`.
+
+Giữ nguyên heuristic, cách sinh trạng thái và logic tìm kiếm; chỉ thay đổi thứ tự ưu tiên trong hàng đợi `frontier`.
+
+### 7.2. Hai chiến lược được so sánh
+
+**Phiên bản 1: A* FIFO (`solution.py`)**
+
+Sử dụng tuple:
+
+```python
+(f, counter, state)
+```
+
+- Ưu tiên trạng thái có `f = g + h` nhỏ nhất.
+- Nếu hai trạng thái có cùng `f`, ưu tiên trạng thái được đưa vào hàng đợi trước.
+- `counter` đảm bảo không phải so sánh trực tiếp các đối tượng trạng thái.
+
+**Phiên bản 2: A* Tie-break theo h (`solution_fifo.py`)**
+
+Thay đổi tuple thành:
+
+```python
+(f, h, counter, state)
+```
+
+Các vị trí được sửa trong hàm `a_star_search()`:
+
+```python
+# Đưa trạng thái ban đầu vào frontier
+heapq.heappush(
+    frontier,
+    (f_init, h_init, next(tie_counter), initial_state)
+)
+
+# Lấy trạng thái ra khỏi frontier
+f_val, h_val, _, current = heapq.heappop(frontier)
+
+# Đưa trạng thái kế tiếp vào frontier
+heapq.heappush(
+    frontier,
+    (f_child, h_val, next(tie_counter), child)
+)
+```
+
+**Nguyên lý hoạt động:**
+
+1. Ưu tiên trạng thái có `f` nhỏ nhất.
+2. Nếu hai trạng thái có cùng `f`, ưu tiên trạng thái có `h` nhỏ hơn.
+3. Nếu cả `f` và `h` đều bằng nhau, sử dụng `counter` để duy trì thứ tự FIFO.
+
+Do `f` vẫn là tiêu chí ưu tiên đầu tiên nên tie-break chỉ thay đổi thứ tự xử lý giữa các trạng thái có cùng `f`.
+
+### 7.3. Chuẩn bị benchmark
+
+Các file sử dụng:
+
+| File | Chức năng |
+|---|---|
+| `solution.py` | A* FIFO ban đầu |
+| `solution_fifo.py` | A* tie-break theo h |
+| `benchmark_astar.py` | Benchmark phiên bản FIFO |
+| `benchmark_astar_tiebreak.py` | Benchmark phiên bản tie-break |
+
+Trong `benchmark_astar_tiebreak.py`, đổi import thành:
+
+```python
+import solution_fifo as solution
+```
+
+Các điều kiện thử nghiệm:
+- Cùng heuristic và logic tìm kiếm.
+- Cùng bản đồ.
+- Cùng giới hạn thời gian 30 giây.
+- Mỗi phiên bản chạy 3 lần.
+- Sử dụng Map 0 và Map 14 để so sánh.
+
+### 7.4. Kết quả benchmark
+
+Số liệu dưới đây là kết quả của 3 lần chạy. Thời gian được tính trung bình.
+
+**Map 0**
+
+| Chỉ số | A* FIFO | Tie-break h |
+|---|---:|---:|
+| Status | SOLVED | SOLVED |
+| Steps | 16 | 16 |
+| Expanded | 9.517 | 6.435 |
+| Generated | 47.952 | 32.581 |
+| Unique | 14.182 | 9.910 |
+| Time trung bình | 0,182 s | 0,115 s |
+| Valid | True | True |
+
+**Map 14**
+
+| Chỉ số | A* FIFO | Tie-break h |
+|---|---:|---:|
+| Status | SOLVED | SOLVED |
+| Steps | 25 | 25 |
+| Expanded | 274.308 | 171.406 |
+| Generated | 1.763.445 | 1.102.430 |
+| Unique | 422.515 | 283.772 |
+| Time trung bình | 8,267 s | 3,713 s |
+| Valid | True | True |
+
+### 7.5. Tỷ lệ cải thiện
+
+| Chỉ số | Map 0 | Map 14 |
+|---|---:|---:|
+| Expanded giảm | 32,4% | 37,5% |
+| Generated giảm | 32,1% | 37,5% |
+| Unique giảm | 30,1% | 32,8% |
+| Thời gian giảm | 36,7% | 55,1% |
+
+Công thức tính tỷ lệ giảm:
+
+\[
+\text{Reduction} =
+\frac{\text{FIFO} - \text{Tie-break}}
+{\text{FIFO}}\times 100\%
+\]
+
+### 7.6. Kiểm chứng tính đúng đắn
+
+- Cả hai phiên bản đều tìm được lời giải trên Map 0 và Map 14.
+- Tất cả kết quả đều có `Valid = True`.
+- Số bước lời giải của hai phiên bản giống nhau:
+  - Map 0: 16 bước.
+  - Map 14: 25 bước.
+- Hai lệnh kiểm tra framework và thống kê đều chạy thành công:
+  - `python -m unittest test_framework`
+  - `python test_stats.py`
+
+Lưu ý: Kết quả trên hai bản đồ là bằng chứng thực nghiệm cho các trường hợp đã thử nghiệm, không thay thế chứng minh tính tối ưu trên mọi bản đồ. Tính tối ưu còn phụ thuộc vào tính chất của heuristic và điều kiện của thuật toán A*.
+
+### 7.7. Kết luận
+
+Chiến lược tie-break theo `h` cho kết quả tốt hơn FIFO trong hai bản đồ thử nghiệm.
+
+- Giảm số node mở rộng từ 32,4% đến 37,5%.
+- Giảm thời gian chạy từ 36,7% đến 55,1%.
+- Giữ nguyên số bước lời giải và tính hợp lệ của kết quả.
+
+Vì vậy, tie-break theo `h` là một cải tiến đáng giữ lại và tiếp tục đánh giá trên nhiều bản đồ hơn.
+
+**Vai trò Member C:** Thực hiện thay đổi chiến lược tie-break, xây dựng benchmark riêng, kiểm chứng kết quả và phân tích mức cải thiện hiệu năng.
