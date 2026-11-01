@@ -497,3 +497,189 @@ obots, và tuyệt đối **không làm biến đổi (read-only)** đối tư�
    - Thứ 4: A mở PR cho A* (h = 0); B mở PR cho Ô chết và Bảng khoảng cách.
    - Review chéo: B review PR của A, C review PR của B theo đúng quy định sổ tay.
    - Thứ 5: A và B cùng ngồi ghép h1 vào A* trên nhánh tích hợp.
+   # MEMBER C – HIỆU NĂNG VÀ KIỂM CHỨNG TỐI ƯU
+
+## 1. Mục tiêu thực hiện
+
+Nhiệm vụ của thành viên C trong tuần 2:
+
+- Kiểm tra tính đúng đắn của framework sau khi chỉnh sửa.
+- Đo lường hiệu năng thuật toán A*.
+- Thống kê số node mở rộng, số node được sinh và số trạng thái duy nhất.
+- Sử dụng `cProfile` để xác định các hàm tiêu tốn nhiều thời gian.
+- Tối ưu cấu trúc dữ liệu nhằm giảm chi phí xử lý.
+- So sánh hiệu năng trước và sau tối ưu.
+
+## 2. Kiểm thử tính đúng đắn của framework
+
+Sau khi chỉnh sửa file `sokoban.py`, tiến hành kiểm thử bằng lệnh:
+
+```bash
+python -m unittest test_framework
+```
+
+**Kết quả:** Các test trong `test_framework` đều PASS (7/7).
+
+Điều này xác nhận các chức năng cơ bản của framework vẫn hoạt động đúng sau khi tối ưu:
+
+- Robot di chuyển đúng quy tắc.
+- Kiểm tra va chạm giữa robot, hộp và vật cản.
+- Robot đẩy hộp đúng quy tắc.
+- Trạng thái mới được tạo chính xác.
+- Các trạng thái cũ không bị thay đổi ngoài ý muốn.
+
+## 3. Tối ưu cấu trúc dữ liệu `new_boxes`
+
+### 3.1. Vấn đề trong phiên bản ban đầu
+
+Trong hàm `successors()` của lớp `SokobanState`, mỗi lần xét một hướng di chuyển, chương trình đều tạo một bản sao của tập hợp hộp:
+
+```python
+new_boxes = set(self.boxes)
+```
+
+Tuy nhiên, phần lớn các bước di chuyển của robot không làm thay đổi vị trí hộp.
+
+Việc liên tục tạo bản sao không cần thiết gây ra chi phí xử lý và cấp phát bộ nhớ.
+
+### 3.2. Giải pháp tối ưu
+
+Thay vì luôn tạo bản sao, phiên bản mới sử dụng lại tập hợp `self.boxes`:
+
+```python
+new_boxes = self.boxes
+```
+
+Chỉ khi robot thực sự đẩy hộp, chương trình mới tạo một bản sao để cập nhật:
+
+```python
+new_boxes = set(self.boxes)
+new_boxes.remove(new_location)
+new_boxes.add(new_box_location)
+new_boxes = frozenset(new_boxes)
+```
+
+### 3.3. Nguyên lý tối ưu
+
+- `self.boxes` có kiểu `frozenset`, là tập hợp bất biến.
+- Khi robot di chuyển mà không đẩy hộp, trạng thái mới có thể dùng chung tập hợp hộp với trạng thái cũ.
+- Khi robot đẩy hộp, chương trình tạo một tập hợp mới, cập nhật vị trí hộp rồi chuyển về `frozenset`.
+- Không làm thay đổi dữ liệu hộp của trạng thái ban đầu.
+
+**Kết quả:** Giảm số lần sao chép tập hợp hộp khi sinh trạng thái kế tiếp, đồng thời giữ nguyên logic di chuyển của Sokoban.
+
+## 4. Đo lường và so sánh hiệu năng
+
+### 4.1. Công cụ đo
+
+Sử dụng chương trình `benchmark_astar.py` để đo hiệu năng thuật toán A*.
+
+Lệnh thực hiện:
+
+```bash
+python benchmark_astar.py --maps 0 14 --timebound 30
+```
+
+Hai bản đồ được lựa chọn:
+
+- Map 0: Bản đồ có độ phức tạp tương đối thấp.
+- Map 14: Bản đồ có độ phức tạp cao hơn, giúp đánh giá hiệu năng khi phải xử lý nhiều trạng thái.
+
+Mỗi bản đồ được chạy 3 lần sau tối ưu để tính thời gian trung bình.
+
+### 4.2. Các chỉ số đánh giá
+
+| Chỉ số | Ý nghĩa |
+|---|---|
+| Steps | Số bước trong lời giải |
+| Expanded | Số node đã được mở rộng |
+| Generated | Tổng số node được sinh ra |
+| Unique | Số trạng thái duy nhất |
+| Time(s) | Thời gian thực thi |
+| Valid | Lời giải có hợp lệ hay không |
+
+### 4.3. Kết quả sau tối ưu
+
+Kết quả của 3 lần chạy:
+
+| Map | Lần 1 (s) | Lần 2 (s) | Lần 3 (s) | Trung bình (s) |
+|---|---:|---:|---:|---:|
+| 0 | 0.142 | 0.139 | 0.149 | **0.143** |
+| 14 | 5.972 | 5.952 | 6.114 | **6.013** |
+
+Các chỉ số node trong cả 3 lần chạy đều giống nhau:
+
+| Map | Steps | Expanded | Generated | Unique | Valid |
+|---|---:|---:|---:|---:|---|
+| 0 | 16 | 9,517 | 47,952 | 14,182 | True |
+| 14 | 25 | 274,308 | 1,763,445 | 422,515 | True |
+
+### 4.4. So sánh thời gian trước và sau tối ưu
+
+Dữ liệu đo trước tối ưu:
+
+| Map | Thời gian trước tối ưu (s) |
+|---|---:|
+| 0 | 0.170 |
+| 14 | 7.621 |
+
+So sánh với thời gian trung bình sau tối ưu:
+
+| Map | Trước tối ưu (s) | Sau tối ưu (s) | Mức giảm |
+|---|---:|---:|---:|
+| 0 | 0.170 | 0.143 | 15.7% |
+| 14 | 7.621 | 6.013 | 21.1% |
+
+Công thức tính:
+
+\[
+\text{Mức giảm}=
+\frac{T_{\text{trước}}-T_{\text{sau}}}
+{T_{\text{trước}}}\times100\%
+\]
+
+**Nhận xét:**
+
+- Thời gian thực thi giảm ở cả hai bản đồ.
+- Map 0 giảm khoảng 15.7%.
+- Map 14 giảm khoảng 21.1%.
+- Các lần chạy sau tối ưu cho kết quả ổn định, với số node và số bước giống nhau.
+
+Lưu ý: Thời gian trước tối ưu hiện được ghi nhận từ một lần chạy, trong khi thời gian sau tối ưu là trung bình của ba lần chạy. Vì vậy, mức cải thiện trên mang tính tham khảo; cần đo nhiều lần ở cả hai phiên bản nếu muốn có phép so sánh thực nghiệm cân bằng hơn.
+
+**Lưu ý về số node:** Số liệu Expanded, Generated và Unique trước tối ưu cần được bổ sung từ log benchmark phiên bản cũ. Không sử dụng số liệu từ những lần chạy A* có cấu hình hoặc phiên bản heuristic khác nhau để so sánh trực tiếp.
+
+## 5. Phân tích hiệu năng bằng cProfile
+
+Sử dụng công cụ `cProfile` để xác định các hàm tiêu tốn nhiều thời gian trong quá trình giải Sokoban.
+
+Các lệnh đã sử dụng:
+
+```bash
+python profile_solver.py --map 0 --timebound 30
+python profile_solver.py --map 14 --timebound 30
+```
+
+Kết quả profiling cho thấy:
+
+- `a_star_search()` là hàm điều khiển quá trình tìm kiếm.
+- `successors()` có thời gian thực thi tích lũy đáng kể.
+- `SokobanState.__init__()` được gọi nhiều lần do quá trình sinh trạng thái.
+- Các thao tác xử lý tập hợp và kiểm tra trạng thái cũng góp phần vào chi phí tính toán.
+
+**Nhận xét:** Hàm `successors()` là một trong những vị trí đáng chú ý để tối ưu vì được gọi với tần suất cao trong quá trình tìm kiếm.
+
+Việc hạn chế tạo bản sao `new_boxes` không cần thiết là một cải tiến phù hợp với kết quả phân tích này.
+
+## 6. Kết luận
+
+Trong tuần 2, thành viên C đã thực hiện:
+
+- Kiểm thử framework sau khi chỉnh sửa và xác nhận 7/7 test PASS.
+- Phân tích hiệu năng thuật toán A* bằng benchmark.
+- Sử dụng `cProfile` để xác định các hàm tiêu tốn nhiều thời gian.
+- Tối ưu việc tạo bản sao tập hợp `new_boxes` trong `successors()`.
+- Chạy benchmark 3 lần sau tối ưu trên Map 0 và Map 14.
+- Ghi nhận thời gian chạy trung bình giảm khoảng 15.7% trên Map 0 và 21.1% trên Map 14 so với số liệu trước tối ưu đã có.
+
+**Đánh giá:** Cải tiến `new_boxes` giúp giảm chi phí xử lý khi sinh trạng thái mà không thay đổi quy tắc hoạt động của Sokoban.

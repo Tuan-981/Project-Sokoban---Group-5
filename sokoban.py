@@ -46,7 +46,8 @@ class SokobanState(StateSpace):
               new_robots = list(self.robots);
               new_robots.remove(self.robots[robot])
               new_robots = tuple(new_robots)
-              new_boxes = set(self.boxes)
+              # Reuse the immutable box set unless this move pushes a box.
+              new_boxes = self.boxes
               
               if new_location[0] < 0 or new_location[0] >= self.width:
                   continue
@@ -71,14 +72,16 @@ class SokobanState(StateSpace):
                   if new_box_location in new_boxes:
                       continue
                   
+                  new_boxes = set(self.boxes)
                   new_boxes.remove(new_location)
                   new_boxes.add(new_box_location)
+                  new_boxes = frozenset(new_boxes)
               
               new_robots = list(self.robots)
               new_robots[robot] = new_location
               new_robots = tuple(new_robots)
 
-              new_state = SokobanState(str(robot) + " " + direction.name, self.gval + transition_cost, self, self.width, self.height, new_robots, frozenset(new_boxes), self.storage, self.obstacles)
+              new_state = SokobanState(str(robot) + " " + direction.name, self.gval + transition_cost, self, self.width, self.height, new_robots, new_boxes, self.storage, self.obstacles)
               successors.append(new_state)
 
         return successors
