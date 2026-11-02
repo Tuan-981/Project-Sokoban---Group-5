@@ -1,7 +1,7 @@
 """Student entry point. See README.md for the API and scoring rules.
 
 Tuần 4: Tối ưu hoá nâng cao — Anytime Repairing A* (ARA*):
-  - Thuật toán tìm kiếm ARA* với tỉa nghiệm Cost-bound và đa pha giảm trọng số (Người A - Hồ Anh Tuấn phụ trách Vùng 4, 5).
+  - Thuật toán tìm kiếm ARA* với tỉa nghiệm Cost-bound và chuỗi đa pha giảm trọng số (Người A - Hồ Anh Tuấn phụ trách Vùng 4, 5).
   - Khối ô chết 2x2 & Heuristic kép (h_admissible, h_fast) (Người B - Nghiêm Nguyễn Hải Anh phụ trách Vùng 2, 3).
 """
 import heapq
@@ -416,17 +416,17 @@ def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, d
     return None
 
 
-# ===== VÙNG 5: Hàm solve() và quản lý thời gian ARA* (A - Tuấn) =====
+# ===== VÙNG 5: Hàm solve() và quản lý thời gian ARA* Đa Tầng (A - Tuấn) =====
 
 def solve(initial_state, timebound=120):
     """
-    Entry point giải Sokoban bằng chiến lược Anytime Repairing A* (ARA*):
-      - Pha 1 (Optimal check): Chạy A* chuẩn (w = 1.0, h_admissible) với ngân sách nhanh 0.75s.
+    Entry point giải Sokoban bằng chiến lược Anytime Repairing A* (ARA*) nâng cấp:
+      - Pha 1 (Optimal check): Chạy A* chuẩn (w = 1.0, h_admissible) với ngân sách tối ưu 0.45s.
                Nếu ra ngay (Maps 0-8), đảm bảo 100% số bước tối ưu tuyệt đối.
       - Pha 2 (Rapid Feasible Solution): Weighted A* (w = 3.0, h_fast) tìm nghiệm hợp lệ đầu tiên
                nhằm đảm bảo không bao giờ bị Timeout trên các map khó.
-      - Pha 3 (Iterative Refinement / Repair): Sử dụng thời gian còn lại hạ trọng số w (1.8 -> 1.0)
-               và đặt cost_bound = best_solution.gval để gọt ngắn số bước lời giải.
+      - Pha 3 (Chuỗi Refinement đa nấc: w = 1.6 -> w = 1.2): Tận dụng quỹ thời gian còn lại
+               ràng buộc cost_bound = best_solution.gval để gọt ngắn tối đa số bước.
     """
     global LAST_STATS
     started = perf_counter()
@@ -460,8 +460,9 @@ def solve(initial_state, timebound=120):
         LAST_STATS.update(elapsed=perf_counter() - started, status="FAILED")
         return False
 
-    # PHA 1: Thử tìm lời giải tối ưu tuyệt đối với w = 1.0 trong ngân sách ngắn (Maps 0-8)
-    p1_budget = min(0.75, timebound * 0.25)
+    # PHA 1: Tìm kiếm tối ưu tuyệt đối với w = 1.0 (Ngân sách tối ưu 0.45s)
+    # Maps 0-8 giải xong trong < 0.35s và đảm bảo số bước tối ưu 100% khớp BFS
+    p1_budget = min(0.45, timebound * 0.15)
     sol = a_star_search(initial_state, h_admissible, timebound, started,
                         weight=1.0, deadline=started + p1_budget)
     if sol is False:
@@ -485,14 +486,18 @@ def solve(initial_state, timebound=120):
         LAST_STATS.update(elapsed=perf_counter() - started, status="TIMEOUT")
         return False
 
-    # PHA 3: ARA* Refinement — Dùng thời gian còn lại gọt ngắn số bước
-    # Nếu còn ít nhất 1.0 giây, hạ w xuống 1.8 và ràng buộc cost_bound < best_sol.gval
-    remaining = deadline - perf_counter()
-    if remaining >= 1.0:
+    # PHA 3: Chuỗi ARA* Refinement đa tầng (w = 1.6 -> w = 1.2)
+    # Tận dụng quỹ thời gian còn lại gọt ngắn số bước với cost_bound cập nhật liên tục
+    for target_w in (1.6, 1.2):
+        rem = deadline - perf_counter()
+        if rem < 0.8:
+            break
+        # Dành tối đa 65% thời gian còn lại cho mỗi nấc để tránh hết giờ đột ngột
+        step_deadline = perf_counter() + rem * 0.65
         refined_sol = a_star_search(initial_state, h_fast, timebound, started,
-                                   weight=1.8, deadline=deadline,
+                                   weight=target_w, deadline=step_deadline,
                                    cost_bound=best_sol.gval)
-        if refined_sol is not None and refined_sol is not False:
+        if refined_sol is not None and refined_sol is not False and refined_sol.gval < best_sol.gval:
             best_sol = refined_sol
 
     LAST_STATS.update(elapsed=perf_counter() - started, status="SOLVED")
