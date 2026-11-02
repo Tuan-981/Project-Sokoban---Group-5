@@ -978,3 +978,24 @@ Vì vậy, tie-break theo `h` là một cải tiến đáng giữ lại và ti�
 | 19 | SOLVED | 86 | 16,268 | 150,783 | 56,826 | 1.74 | True |
 
 **Tổng kết:** Đạt tỷ lệ 20/20 maps (100% SOLVED), không có map nào bị TIMEOUT trong ngân sách 5 giây.
+
+
+## Tuần 4 — Tuấn (A): Nâng cấp Anytime Repairing A* (ARA*) & Gọt tỉa số bước tối ưu
+
+### 1. Động lực và Thiết kế kỹ thuật (Vùng 4 & 5 trong solution.py)
+- **Hạn chế Tuần 3:** Weighted A* ở $w=3.0$ giúp giải được 20/20 maps nhưng số bước ở một số map lớn còn dài (ví dụ: Map 9 là 26 bước, Map 11 là 30 bước, Map 12 là 30 bước, Map 14 là 29 bước).
+- **Cải tiến Tuần 4 — Giải thuật Anytime Repairing A* (ARA\*):**
+  1. **Cắt tỉa cận trên (Cost-Bound Pruning):** Khi đã tìm thấy nghiệm đầu tiên với chi phí $G_{best}$, ta truyền $cost\_bound = G_{best}$ vào vòng lặp tìm kiếm tiếp theo. Bỏ qua mọi trạng thái có $g(s) + h(s) \ge cost\_bound$.
+  2. **Tận dụng thời gian còn lại (Refinement Phase):** Sau khi có nghiệm $w=3.0$, thuật toán tận dụng quỹ thời gian còn lại (nếu còn $\ge 1.0$s) để hạ trọng số xuống $w=1.8$ nhằm tìm kiếm đường đi ngắn hơn.
+
+### 2. Kết quả gọt tỉa số bước trên các map lớn (So sánh Tuần 3 vs Tuần 4)
+
+| Map | Số bước Tuần 3 ($w=3.0$) | Số bước Tuần 4 (ARA*) | Mức cải thiện | Thời gian Tuần 4 (s) |
+|:---:|:---:|:---:|:---:|:---:|
+| **Map 9** | 26 | **24** | **-2 bước (-7.7%)** | 2.27s |
+| **Map 11** | 30 | **26** | **-4 bước (-13.3%)** | 0.90s |
+| **Map 12** | 30 | **24** | **-6 bước (-20.0%)** | 1.71s |
+| **Map 13** | 31 | **27** | **-4 bước (-12.9%)** | 0.88s |
+| **Map 14** | 29 | **25** | **-4 bước (-13.8%)** | 1.26s |
+
+- **Kết luận:** Tỷ lệ giải quyết tiếp tục duy trì **20/20 MAPS (100% SOLVED)**, đồng thời tổng số bước trên các map khó giảm đáng kể từ 2 đến 6 bước mỗi map mà vẫn chạy kịp trong ngân sách 5 giây.
