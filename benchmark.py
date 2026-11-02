@@ -1,14 +1,23 @@
 """Benchmark Sokoban: mỗi map chạy trong một tiến trình mới có timeout."""
 import argparse, collections, json, os, subprocess, sys, time 
 
-def run_worker(index, timebound, solver):
+
+def load_maps(set_name):
+    """Trả về danh sách trạng thái đầu của bộ map được chọn."""
+    if set_name == "custom":
+        from custom_maps import MAPS
+        return [state for _, state, _ in MAPS]
+    from sokoban import PROBLEMS
+    return list(PROBLEMS)
+
+
+def run_worker(index, timebound, solver, map_set):
     """Chạy TRONG tiến trình con: giải map số index, in 1 dòng RESULT."""
     import importlib
     solution = importlib.import_module(solver)
-    from sokoban import PROBLEMS
     from validation import validate_solution
 
-    initial = PROBLEMS[index]
+    initial = load_maps(map_set)[index]
     start = time.time()
     final = solution.solve(initial, timebound)
     elapsed = time.time() - start
@@ -24,10 +33,10 @@ def run_worker(index, timebound, solver):
     print("RESULT " + json.dumps(result))
 
 
-def run_one(index, timebound, solver):
+def run_one(index, timebound, solver, map_set):
     """Chạy 1 map trong tiến trình con, trả về dict kết quả."""
     cmd = [sys.executable, __file__, "--worker", str(index),
-           "--timebound", str(timebound), "--solver", solver]
+           "--timebound", str(timebound), "--solver", solver, "--set", map_set]
     start = time.time()
     try:
         p = subprocess.run(cmd, capture_output=True, text=True,
@@ -83,15 +92,17 @@ def main():
     parser.add_argument("--md", action="store_true", help="in thêm bảng Markdown")
     parser.add_argument("--out", type=str, default=None, help="ghi bảng Markdown vào file này")
     parser.add_argument("--solver", type=str, default="solution")
+    parser.add_argument("--set", dest="map_set", choices=["problems", "custom"],
+                        default="problems", help="bộ map: problems (20 map của thầy) hoặc custom")
     args = parser.parse_args()
 
     
     if args.worker is not None:
-        run_worker(args.worker, args.timebound, args.solver)
+        run_worker(args.worker, args.timebound, args.solver, args.map_set)
         return
 
 
-    maps = args.maps if args.maps else range(20)
+    maps = args.maps if args.maps else range(len(load_maps(args.map_set)))
     results = []
 
     # Tiêu đề bảng (in 1 lần, trước vòng lặp)
@@ -99,7 +110,7 @@ def main():
     print("-" * 78)
 
     for i in maps:
-        r = run_one(i, args.timebound, args.solver)
+        r = run_one(i, args.timebound, args.solver, args.map_set)
         results.append(r)
         print(f"{i:<5}{r['status']:<9}{str(r['steps']):>7}"
               f"{r.get('expanded', '-'):>11}{r.get('generated', '-'):>11}"
