@@ -1,8 +1,8 @@
 """Student entry point. See README.md for the API and scoring rules.
 
-Tuần 2: Bản tích hợp hoàn chỉnh đỉnh cao:
-  - Thuật toán tìm kiếm A* (Người A - Hồ Anh Tuấn phụ trách Vùng 4, 5).
-  - Ô chết (Dead squares) & Heuristic h2 Ghép cặp Bitmask DP tối ưu (Người B - Nghiêm Nguyễn Hải Anh phụ trách Vùng 2, 3).
+Tuần 3: Tích hợp hoàn chỉnh đỉnh cao:
+  - Thuật toán tìm kiếm Weighted A* & Anytime Search (Người A - Hồ Anh Tuấn phụ trách Vùng 4, 5).
+  - Khối ô chết 2x2 & Heuristic kép (h_admissible, h_fast) (Người B - Nghiêm Nguyễn Hải Anh phụ trách Vùng 2, 3).
 """
 import heapq
 import itertools
@@ -207,39 +207,182 @@ def make_heuristic_h2(initial_state):
         cache[key] = result
         return result
 
-    return h
+    return h 
 
+# ----- TUẦN 3 (B - Hải Anh): h_admissible / h_fast và ô chết khối 2x2 -----
 
-# ===== VÙNG 4: Thuật toán tìm kiếm A* (A - Tuấn) =====
-
-def a_star_search(initial_state, heuristic_fn, timebound, started):
+def tinh_bang_di_bo(initial_state):
     """
-    Thuật toán tìm kiếm A* chuẩn:
-      f(s) = g(s) + h(s)
+    Bảng khoảng cách ĐI BỘ giữa các ô trống (chỉ xét tường, bỏ qua thùng và robot).
+    walk[a][b] = số bước đi bộ ít nhất từ ô a đến ô b.
+    Vì bỏ qua thùng nên walk[a][b] <= khoảng cách đi bộ thật -> là cận dưới.
+    Tính 1 lần ở đầu solve(); bàn tối đa 8x8 nên chỉ ~64 lần BFS.
+    """
+    w, h = initial_state.width, initial_state.height
+    walls = initial_state.obstacles
+    walk = {}
+    for x in range(w):
+        for y in range(h):
+            start = (x, y)
+            if start in walls:
+                continue
+            dist = {start: 0}
+            queue = deque([start])
+            while queue:
+                cx, cy = queue.popleft()
+                for dx, dy in ((0, -1), (0, 1), (-1, 0), (1, 0)):
+                    nxt = (cx + dx, cy + dy)
+                    if nxt in dist:
+                        continue
+                    if not (0 <= nxt[0] < w and 0 <= nxt[1] < h):
+                        continue
+                    if nxt in walls:
+                        continue
+                    dist[nxt] = dist[(cx, cy)] + 1
+                    queue.append(nxt)
+            walk[start] = dist
+    return walk
+
+
+def lam_ham_khoi_2x2(initial_state):
+    """
+    Trả về hàm ket_2x2(boxes) -> True nếu có BẾ TẮC khối 2x2.
+    Bế tắc: một khối 2x2 mà cả 4 ô đều là tường / ngoài bàn / thùng,
+    và có ít nhất 1 thùng trong khối KHÔNG nằm trên ô đích.
+    Khi đó các thùng trong khối chặn lẫn nhau, không ai đẩy được nữa.
+    Khối toàn thùng đã nằm trên đích thì KHÔNG phải bế tắc.
+    Robot không tính là vật chặn vì robot di chuyển được.
+    """
+    w, h = initial_state.width, initial_state.height
+    walls = initial_state.obstacles
+    storage = initial_state.storage
+
+    def bi_chan(c, boxes):
+        x, y = c
+        return (not (0 <= x < w and 0 <= y < h)) or c in walls or c in boxes
+
+    def ket_2x2(boxes):
+        for b in boxes:
+            if b in storage:
+                continue  # chỉ xét quanh thùng CHƯA ở đích
+            bx, by = b
+            for ox, oy in ((0, 0), (-1, 0), (0, -1), (-1, -1)):
+                tx, ty = bx + ox, by + oy  # góc trên-trái của khối chứa b
+                if (bi_chan((tx, ty), boxes) and bi_chan((tx + 1, ty), boxes)
+                        and bi_chan((tx, ty + 1), boxes)
+                        and bi_chan((tx + 1, ty + 1), boxes)):
+                    return True
+        return False
+
+    return ket_2x2
+
+
+def make_heuristics(initial_state, dung_2x2=True):
+    """
+    Giao diện cho A (Tuần 3). Trả về cặp (h_admissible, h_fast), tính bảng 1 lần.
+
+    h_admissible(s): h2 (ghép cặp bitmask) -> ADMISSIBLE, dùng ở pha w = 1.
+    h_fast(s)      : h2 + bước đi bộ của robot -> CÓ THỂ KHÔNG admissible,
+                     chỉ dùng ở các pha w > 1 (tìm nhanh, chấp nhận kém tối ưu).
+
+    Cả hai trả về >= INF nếu trạng thái bế tắc (ô chết, thiếu đích, khối 2x2).
+    Cắt bế tắc không làm mất lời giải vì trạng thái bế tắc vốn vô nghiệm.
+    Chỉ đọc s, không sửa s.
+    """
+    h2 = make_heuristic_h2(initial_state)
+    walk = tinh_bang_di_bo(initial_state)
+    ket_2x2 = lam_ham_khoi_2x2(initial_state) if dung_2x2 else (lambda boxes: False)
+    storage = initial_state.storage
+    w, hh = initial_state.width, initial_state.height
+    walls = initial_state.obstacles
+
+    # Với mỗi ô c: các ô kề c mà robot có thể đứng để đẩy thùng ở c
+    dung = {}
+    for x in range(w):
+        for y in range(hh):
+            c = (x, y)
+            dung[c] = [n for n in ((x, y - 1), (x, y + 1), (x - 1, y), (x + 1, y))
+                       if 0 <= n[0] < w and 0 <= n[1] < hh and n not in walls]
+
+    def h_admissible(s):
+        if ket_2x2(s.boxes):
+            return INF
+        return h2(s)
+
+    def buoc_di_bo(s):
+        """
+        Ước lượng số bước robot phải đi bộ trước lần đẩy đầu tiên:
+        min theo (robot, thùng chưa ở đích) của khoảng cách tới ô kề thùng.
+        Có thể trùng với các bước đẩy đã đếm trong h2 -> không đảm bảo admissible.
+        """
+        best = None
+        for b in s.boxes:
+            if b in storage:
+                continue
+            for r in s.robots:
+                tab = walk.get(r)
+                if tab is None:
+                    continue
+                for n in dung[b]:
+                    d = tab.get(n)
+                    if d is not None and (best is None or d < best):
+                        best = d
+        return 0 if best is None else best
+
+    def h_fast(s):
+        base = h_admissible(s)
+        if base >= INF:
+            return INF
+        return base + buoc_di_bo(s)
+
+    return h_admissible, h_fast
+
+
+# ===== VÙNG 4: Thuật toán tìm kiếm Weighted A* (A - Tuấn) =====
+
+def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, deadline=None):
+    """
+    Thuật toán tìm kiếm Weighted A* với cơ chế tie-break theo h:
+      f(s) = g(s) + weight * h(s)
+      Hàng đợi ưu tiên: (f, h, tie_counter, state)
+
+    Args:
+        initial_state: Trạng thái xuất phát
+        heuristic_fn: Hàm đánh giá heuristic h(s)
+        timebound: Thời gian ngân sách tổng thể
+        started: Mốc thời gian bắt đầu (perf_counter)
+        weight: Trọng số heuristic (w >= 1.0)
+        deadline: Mốc thời gian deadline cụ thể cho pha tìm kiếm này
+
+    Returns:
+        SokobanState: Trạng thái đích nếu tìm thấy
+        None: Nếu hết thời gian trong pha này (để solve() tiếp tục pha sau)
+        False: Nếu trạng thái ban đầu bế tắc
     """
     global LAST_STATS
-    deadline = started + timebound
+    if deadline is None:
+        deadline = started + timebound
     tie_counter = itertools.count()
 
     h_init = heuristic_fn(initial_state)
     if h_init >= INF:
-        LAST_STATS.update(elapsed=perf_counter() - started, status="FAILED")
         return False
 
     frontier = []
-    f_init = initial_state.gval + h_init
-    heapq.heappush(frontier, (f_init, next(tie_counter), initial_state))
+    f_init = initial_state.gval + weight * h_init
+    # Tie-break theo h: khi cùng f, ưu tiên node có h nhỏ hơn (tiến gần đích hơn)
+    heapq.heappush(frontier, (f_init, h_init, next(tie_counter), initial_state))
 
     init_key = initial_state.hashable_state()
     best_g = {init_key: initial_state.gval}
-    LAST_STATS["unique"] = 1
+    if LAST_STATS["unique"] == 0:
+        LAST_STATS["unique"] = 1
 
     while frontier:
         if perf_counter() >= deadline:
-            LAST_STATS.update(elapsed=perf_counter() - started, status="TIMEOUT")
-            return False
+            return None
 
-        f_val, _, current = heapq.heappop(frontier)
+        f_val, h_val, _, current = heapq.heappop(frontier)
         curr_key = current.hashable_state()
 
         if current.gval > best_g.get(curr_key, current.gval):
@@ -249,7 +392,6 @@ def a_star_search(initial_state, heuristic_fn, timebound, started):
 
         # Goal test khi POP
         if sokoban_goal_state(current):
-            LAST_STATS.update(elapsed=perf_counter() - started, status="SOLVED")
             return current
 
         successors = current.successors()
@@ -261,28 +403,32 @@ def a_star_search(initial_state, heuristic_fn, timebound, started):
             if child_key in best_g and child.gval >= best_g[child_key]:
                 continue
 
-            h_val = heuristic_fn(child)
+            h_c = heuristic_fn(child)
 
-            # Cắt tỉa trạng thái rơi vào ô chết hoặc không có cách ghép hợp lệ
-            if h_val >= INF:
+            # Cắt tỉa trạng thái rơi vào ô chết hoặc deadlock khối 2x2
+            if h_c >= INF:
                 continue
 
             if child_key not in best_g:
                 LAST_STATS["unique"] += 1
             best_g[child_key] = child.gval
 
-            f_child = child.gval + h_val
-            heapq.heappush(frontier, (f_child, next(tie_counter), child))
+            f_child = child.gval + weight * h_c
+            heapq.heappush(frontier, (f_child, h_c, next(tie_counter), child))
 
-    LAST_STATS.update(elapsed=perf_counter() - started, status="FAILED")
-    return False
+    return None
 
 
-# ===== VÙNG 5: Hàm solve() và quản lý thời gian (A - Tuấn) =====
+# ===== VÙNG 5: Hàm solve() và quản lý thời gian Anytime (A - Tuấn) =====
 
 def solve(initial_state, timebound=120):
     """
-    Entry point giải Sokoban bằng A* kết hợp Heuristic h2 Ghép cặp Bitmask DP.
+    Entry point giải Sokoban bằng chiến lược Anytime Search kết hợp Weighted A*:
+      - Pha 1: Thử tìm lời giải tối ưu (w = 1.0, h_admissible) với ngân sách nhanh 0.75s
+               (Giải quyết hoàn hảo Maps 0-8 với số bước tối ưu 100% khớp BFS).
+      - Pha 2: Nếu bài toán phức tạp, chuyển sang Weighted A* (w = 3.0, h_fast)
+               (Lao nhanh về đích để mở khóa toàn bộ Maps 9-19 trước timeout).
+      - Pha 3: Dự phòng Weighted A* (w = 2.0, h_admissible) nếu pha 2 chưa ra.
     """
     global LAST_STATS
     started = perf_counter()
@@ -306,7 +452,44 @@ def solve(initial_state, timebound=120):
         )
         return initial_state
 
-    # KÍCH HOẠT HEURISTIC h2 (Ghép cặp 1-1 tối ưu)
-    heuristic_fn = make_heuristic_h2(initial_state)
+    deadline = started + timebound
 
-    return a_star_search(initial_state, heuristic_fn, timebound, started)
+    # KHỞI TẠO BỘ HEURISTIC KÉP (B - Hải Anh)
+    h_admissible, h_fast = make_heuristics(initial_state)
+
+    # Kiểm tra nhanh: Nếu trạng thái xuất phát đã bế tắc (ô chết / deadlock 2x2) -> Vô nghiệm
+    if h_admissible(initial_state) >= INF:
+        LAST_STATS.update(elapsed=perf_counter() - started, status="FAILED")
+        return False
+
+    # PHA 1: Tìm kiếm tối ưu A* (w = 1.0, h_admissible) trong ngân sách ngắn
+    # Với map nhỏ (Maps 0-8), pha này giải xong trong < 0.6s và đảm bảo số bước tối ưu tuyệt đối
+    p1_budget = min(0.75, timebound * 0.25)
+    sol = a_star_search(initial_state, h_admissible, timebound, started,
+                        weight=1.0, deadline=started + p1_budget)
+    if sol is False:
+        LAST_STATS.update(elapsed=perf_counter() - started, status="FAILED")
+        return False
+    if sol is not None:
+        LAST_STATS.update(elapsed=perf_counter() - started, status="SOLVED")
+        return sol
+
+    # PHA 2: Tìm kiếm nhanh Weighted A* (w = 3.0, h_fast) trong thời gian còn lại
+    # Giúp giải quyết nhanh chóng các map kích thước lớn (Maps 9-19)
+    sol = a_star_search(initial_state, h_fast, timebound, started,
+                        weight=3.0, deadline=deadline)
+    if sol is not None and sol is not False:
+        LAST_STATS.update(elapsed=perf_counter() - started, status="SOLVED")
+        return sol
+
+    # PHA 3: Dự phòng Weighted A* (w = 2.0, h_admissible) nếu pha 2 chưa ra
+    if perf_counter() < deadline:
+        sol = a_star_search(initial_state, h_admissible, timebound, started,
+                            weight=2.0, deadline=deadline)
+        if sol is not None and sol is not False:
+            LAST_STATS.update(elapsed=perf_counter() - started, status="SOLVED")
+            return sol
+
+    # Hết ngân sách thời gian mà chưa tìm được đích
+    LAST_STATS.update(elapsed=perf_counter() - started, status="TIMEOUT")
+    return False
