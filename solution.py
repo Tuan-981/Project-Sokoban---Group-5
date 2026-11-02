@@ -1,7 +1,7 @@
 """Student entry point. See README.md for the API and scoring rules.
 
-Tuần 4: Tối ưu hoá nâng cao — Anytime Repairing A* (ARA*):
-  - Thuật toán tìm kiếm ARA* với tỉa nghiệm Cost-bound và chuỗi đa pha giảm trọng số (Người A - Hồ Anh Tuấn phụ trách Vùng 4, 5).
+Tuần 4: Tối ưu hoá nâng cao — Anytime Repairing A* (ARA*) Tinh Gọn:
+  - Thuật toán ARA* tập trung (Focused Refinement w=1.8) kết hợp Cost-bound Pruning (Người A - Hồ Anh Tuấn phụ trách Vùng 4, 5).
   - Khối ô chết 2x2 & Heuristic kép (h_admissible, h_fast) (Người B - Nghiêm Nguyễn Hải Anh phụ trách Vùng 2, 3).
 """
 import heapq
@@ -377,7 +377,7 @@ def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, d
         if current.gval > best_g.get(curr_key, current.gval):
             continue
 
-        # Nếu có cost_bound và chi phí ước lượng vượt cận thì tỉa ngay
+        # Cắt tỉa cận trên: nếu ước lượng tổng chi phí không thể vượt qua nghiệm cũ -> bỏ qua
         if cost_bound is not None and current.gval + h_val >= cost_bound:
             continue
 
@@ -402,7 +402,7 @@ def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, d
             if h_c >= INF:
                 continue
 
-            # Tỉa nhánh con theo cost_bound
+            # Tỉa nhánh con ngay khi sinh nếu vượt quá cost_bound
             if cost_bound is not None and child.gval + h_c >= cost_bound:
                 continue
 
@@ -416,17 +416,17 @@ def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, d
     return None
 
 
-# ===== VÙNG 5: Hàm solve() và quản lý thời gian ARA* Đa Tầng (A - Tuấn) =====
+# ===== VÙNG 5: Hàm solve() và quản lý thời gian ARA* Tinh Gọn (A - Tuấn) =====
 
 def solve(initial_state, timebound=120):
     """
-    Entry point giải Sokoban bằng chiến lược Anytime Repairing A* (ARA*) nâng cấp:
+    Entry point giải Sokoban bằng chiến lược Anytime Repairing A* (ARA*) Tinh Gọn:
       - Pha 1 (Optimal check): Chạy A* chuẩn (w = 1.0, h_admissible) với ngân sách tối ưu 0.45s.
-               Nếu ra ngay (Maps 0-8), đảm bảo 100% số bước tối ưu tuyệt đối.
-      - Pha 2 (Rapid Feasible Solution): Weighted A* (w = 3.0, h_fast) tìm nghiệm hợp lệ đầu tiên
-               nhằm đảm bảo không bao giờ bị Timeout trên các map khó.
-      - Pha 3 (Chuỗi Refinement đa nấc: w = 1.6 -> w = 1.2): Tận dụng quỹ thời gian còn lại
-               ràng buộc cost_bound = best_solution.gval để gọt ngắn tối đa số bước.
+               Giải quyết Maps 0-8 với số bước tối ưu 100% khớp BFS.
+      - Pha 2 (Rapid Feasible Solution): Weighted A* (w = 3.0, h_fast) tìm nghiệm hợp lệ đầu tiên,
+               chống hoàn toàn rủi ro Timeout trên maps lớn.
+      - Pha 3 (Focused Refinement w = 1.8): Nếu còn >= 1.5s, dồn toàn bộ thời gian còn lại
+               để gọt ngắn số bước với cost_bound = best_solution.gval (không phân mảnh thời gian).
     """
     global LAST_STATS
     started = perf_counter()
@@ -486,16 +486,12 @@ def solve(initial_state, timebound=120):
         LAST_STATS.update(elapsed=perf_counter() - started, status="TIMEOUT")
         return False
 
-    # PHA 3: Chuỗi ARA* Refinement đa tầng (w = 1.6 -> w = 1.2)
-    # Tận dụng quỹ thời gian còn lại gọt ngắn số bước với cost_bound cập nhật liên tục
-    for target_w in (1.6, 1.2):
-        rem = deadline - perf_counter()
-        if rem < 0.8:
-            break
-        # Dành tối đa 65% thời gian còn lại cho mỗi nấc để tránh hết giờ đột ngột
-        step_deadline = perf_counter() + rem * 0.65
+    # PHA 3: Focused Refinement (w = 1.8) — Dồn toàn bộ thời gian còn lại gọt bước
+    # Tránh phân mảnh thời gian: chỉ kích hoạt khi còn ít nhất 1.5 giây
+    remaining = deadline - perf_counter()
+    if remaining >= 1.5:
         refined_sol = a_star_search(initial_state, h_fast, timebound, started,
-                                   weight=target_w, deadline=step_deadline,
+                                   weight=1.8, deadline=deadline,
                                    cost_bound=best_sol.gval)
         if refined_sol is not None and refined_sol is not False and refined_sol.gval < best_sol.gval:
             best_sol = refined_sol
