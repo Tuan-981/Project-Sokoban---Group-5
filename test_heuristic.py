@@ -14,22 +14,22 @@ MAP_A = make(6, 5, [(0, 0)], KHOI, [(0, 4), (1, 4), (2, 4), (3, 4)])
 MAP_B = make(6, 5, [(0, 0)], KHOI, KHOI)
 MAP_C = make(6, 5, [(0, 0)], [(2, 1), (3, 1), (2, 2)], [(5, 0), (5, 1), (5, 2)])
 MAP_D = make(6, 5, [(0, 0)], KHOI, [(2, 1), (3, 1), (2, 2), (0, 4)])
- 
- 
+
+
 def duong_di(final):
     """Chuỗi trạng thái từ đầu đến final (đi ngược theo parent rồi đảo)."""
     p = []
     while final is not None:
         p.append(final)
         final = final.parent
-    return p[::-1]
+    return p[::-1] 
  
  
 def ket_2x2(state):
     """Gọi hàm phát hiện bế tắc 2x2 của B trên chính các thùng của state."""
     return solution.lam_ham_khoi_2x2(state)(state.boxes)
  
- 
+
 class TestOChet(unittest.TestCase):
     def test_map1_chi_2_o_song(self):
         _, dist_to_goal, dead = solution.tinh_bang(M["vo_nghiem_goc"])
