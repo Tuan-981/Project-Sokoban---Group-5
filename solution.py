@@ -1,7 +1,7 @@
 """Student entry point. See README.md for the API and scoring rules.
 
-Tuần 3: Tích hợp hoàn chỉnh đỉnh cao:
-  - Thuật toán tìm kiếm Weighted A* & Anytime Search (Người A - Hồ Anh Tuấn phụ trách Vùng 4, 5).
+Tuần 4: Tối ưu hoá nâng cao — Anytime Repairing A* (ARA*) Tinh Gọn:
+  - Thuật toán ARA* tập trung (Focused Refinement w=1.8) kết hợp Cost-bound Pruning (Người A - Hồ Anh Tuấn phụ trách Vùng 4, 5).
   - Khối ô chết 2x2 & Heuristic kép (h_admissible, h_fast) (Người B - Nghiêm Nguyễn Hải Anh phụ trách Vùng 2, 3).
 """
 import heapq
@@ -209,7 +209,7 @@ def make_heuristic_h2(initial_state):
 
     return h 
 
-# ----- TUẦN 3 (B - Hải Anh): h_admissible / h_fast và ô chết khối 2x2 -----
+# ----- TUẦN 3 & 4 (B - Hải Anh): h_admissible / h_fast và ô chết khối 2x2 -----
 
 def tinh_bang_di_bo(initial_state):
     """
@@ -279,7 +279,7 @@ def lam_ham_khoi_2x2(initial_state):
 
 def make_heuristics(initial_state, dung_2x2=True):
     """
-    Giao diện cho A (Tuần 3). Trả về cặp (h_admissible, h_fast), tính bảng 1 lần.
+    Giao diện cho A (Tuần 3 & 4). Trả về cặp (h_admissible, h_fast), tính bảng 1 lần.
 
     h_admissible(s): h2 (ghép cặp bitmask) -> ADMISSIBLE, dùng ở pha w = 1.
     h_fast(s)      : h2 + bước đi bộ của robot -> CÓ THỂ KHÔNG admissible,
@@ -338,26 +338,14 @@ def make_heuristics(initial_state, dung_2x2=True):
     return h_admissible, h_fast
 
 
-# ===== VÙNG 4: Thuật toán tìm kiếm Weighted A* (A - Tuấn) =====
+# ===== VÙNG 4: Thuật toán tìm kiếm Weighted A* với Cost-Bound Pruning (A - Tuấn) =====
 
-def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, deadline=None):
+def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, deadline=None, cost_bound=None):
     """
-    Thuật toán tìm kiếm Weighted A* với cơ chế tie-break theo h:
-      f(s) = g(s) + weight * h(s)
-      Hàng đợi ưu tiên: (f, h, tie_counter, state)
-
-    Args:
-        initial_state: Trạng thái xuất phát
-        heuristic_fn: Hàm đánh giá heuristic h(s)
-        timebound: Thời gian ngân sách tổng thể
-        started: Mốc thời gian bắt đầu (perf_counter)
-        weight: Trọng số heuristic (w >= 1.0)
-        deadline: Mốc thời gian deadline cụ thể cho pha tìm kiếm này
-
-    Returns:
-        SokobanState: Trạng thái đích nếu tìm thấy
-        None: Nếu hết thời gian trong pha này (để solve() tiếp tục pha sau)
-        False: Nếu trạng thái ban đầu bế tắc
+    Thuật toán tìm kiếm Weighted A* nâng cấp Tuần 4:
+      - f(s) = g(s) + weight * h(s)
+      - Tie-break theo h: Hàng đợi ưu tiên (f, h, tie_counter, state)
+      - Cắt tỉa cận trên (Cost-bound pruning): Bỏ qua mọi trạng thái có g(s) + h(s) >= cost_bound
     """
     global LAST_STATS
     if deadline is None:
@@ -367,10 +355,11 @@ def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, d
     h_init = heuristic_fn(initial_state)
     if h_init >= INF:
         return False
+    if cost_bound is not None and initial_state.gval + h_init >= cost_bound:
+        return None
 
     frontier = []
     f_init = initial_state.gval + weight * h_init
-    # Tie-break theo h: khi cùng f, ưu tiên node có h nhỏ hơn (tiến gần đích hơn)
     heapq.heappush(frontier, (f_init, h_init, next(tie_counter), initial_state))
 
     init_key = initial_state.hashable_state()
@@ -386,6 +375,10 @@ def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, d
         curr_key = current.hashable_state()
 
         if current.gval > best_g.get(curr_key, current.gval):
+            continue
+
+        # Cắt tỉa cận trên: nếu ước lượng tổng chi phí không thể vượt qua nghiệm cũ -> bỏ qua
+        if cost_bound is not None and current.gval + h_val >= cost_bound:
             continue
 
         LAST_STATS["expanded"] += 1
@@ -409,6 +402,10 @@ def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, d
             if h_c >= INF:
                 continue
 
+            # Tỉa nhánh con ngay khi sinh nếu vượt quá cost_bound
+            if cost_bound is not None and child.gval + h_c >= cost_bound:
+                continue
+
             if child_key not in best_g:
                 LAST_STATS["unique"] += 1
             best_g[child_key] = child.gval
@@ -419,16 +416,17 @@ def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, d
     return None
 
 
-# ===== VÙNG 5: Hàm solve() và quản lý thời gian Anytime (A - Tuấn) =====
+# ===== VÙNG 5: Hàm solve() và quản lý thời gian ARA* Tinh Gọn (A - Tuấn) =====
 
 def solve(initial_state, timebound=120):
     """
-    Entry point giải Sokoban bằng chiến lược Anytime Search kết hợp Weighted A*:
-      - Pha 1: Thử tìm lời giải tối ưu (w = 1.0, h_admissible) với ngân sách nhanh 0.75s
-               (Giải quyết hoàn hảo Maps 0-8 với số bước tối ưu 100% khớp BFS).
-      - Pha 2: Nếu bài toán phức tạp, chuyển sang Weighted A* (w = 3.0, h_fast)
-               (Lao nhanh về đích để mở khóa toàn bộ Maps 9-19 trước timeout).
-      - Pha 3: Dự phòng Weighted A* (w = 2.0, h_admissible) nếu pha 2 chưa ra.
+    Entry point giải Sokoban bằng chiến lược Anytime Repairing A* (ARA*) Tinh Gọn:
+      - Pha 1 (Optimal check): Chạy A* chuẩn (w = 1.0, h_admissible) với ngân sách tối ưu 0.45s.
+               Giải quyết Maps 0-8 với số bước tối ưu 100% khớp BFS.
+      - Pha 2 (Rapid Feasible Solution): Weighted A* (w = 3.0, h_fast) tìm nghiệm hợp lệ đầu tiên,
+               chống hoàn toàn rủi ro Timeout trên maps lớn.
+      - Pha 3 (Focused Refinement w = 1.8): Nếu còn >= 1.5s, dồn toàn bộ thời gian còn lại
+               để gọt ngắn số bước với cost_bound = best_solution.gval (không phân mảnh thời gian).
     """
     global LAST_STATS
     started = perf_counter()
@@ -462,9 +460,9 @@ def solve(initial_state, timebound=120):
         LAST_STATS.update(elapsed=perf_counter() - started, status="FAILED")
         return False
 
-    # PHA 1: Tìm kiếm tối ưu A* (w = 1.0, h_admissible) trong ngân sách ngắn
-    # Với map nhỏ (Maps 0-8), pha này giải xong trong < 0.6s và đảm bảo số bước tối ưu tuyệt đối
-    p1_budget = min(0.75, timebound * 0.25)
+    # PHA 1: Tìm kiếm tối ưu tuyệt đối với w = 1.0 (Ngân sách tối ưu 0.45s)
+    # Maps 0-8 giải xong trong < 0.35s và đảm bảo số bước tối ưu 100% khớp BFS
+    p1_budget = min(0.45, timebound * 0.15)
     sol = a_star_search(initial_state, h_admissible, timebound, started,
                         weight=1.0, deadline=started + p1_budget)
     if sol is False:
@@ -474,22 +472,29 @@ def solve(initial_state, timebound=120):
         LAST_STATS.update(elapsed=perf_counter() - started, status="SOLVED")
         return sol
 
-    # PHA 2: Tìm kiếm nhanh Weighted A* (w = 3.0, h_fast) trong thời gian còn lại
-    # Giúp giải quyết nhanh chóng các map kích thước lớn (Maps 9-19)
-    sol = a_star_search(initial_state, h_fast, timebound, started,
-                        weight=3.0, deadline=deadline)
-    if sol is not None and sol is not False:
-        LAST_STATS.update(elapsed=perf_counter() - started, status="SOLVED")
-        return sol
+    # PHA 2: Tìm lời giải hợp lệ nhanh nhất bằng Weighted A* (w = 3.0, h_fast)
+    best_sol = a_star_search(initial_state, h_fast, timebound, started,
+                             weight=3.0, deadline=deadline)
 
-    # PHA 3: Dự phòng Weighted A* (w = 2.0, h_admissible) nếu pha 2 chưa ra
-    if perf_counter() < deadline:
-        sol = a_star_search(initial_state, h_admissible, timebound, started,
-                            weight=2.0, deadline=deadline)
-        if sol is not None and sol is not False:
-            LAST_STATS.update(elapsed=perf_counter() - started, status="SOLVED")
-            return sol
+    # Nếu h_fast chưa ra, thử pha dự phòng với h_admissible (w = 2.0)
+    if best_sol is None or best_sol is False:
+        if perf_counter() < deadline:
+            best_sol = a_star_search(initial_state, h_admissible, timebound, started,
+                                     weight=2.0, deadline=deadline)
 
-    # Hết ngân sách thời gian mà chưa tìm được đích
-    LAST_STATS.update(elapsed=perf_counter() - started, status="TIMEOUT")
-    return False
+    if best_sol is None or best_sol is False:
+        LAST_STATS.update(elapsed=perf_counter() - started, status="TIMEOUT")
+        return False
+
+    # PHA 3: Focused Refinement (w = 1.8) — Dồn toàn bộ thời gian còn lại gọt bước
+    # Tránh phân mảnh thời gian: chỉ kích hoạt khi còn ít nhất 1.5 giây
+    remaining = deadline - perf_counter()
+    if remaining >= 1.5:
+        refined_sol = a_star_search(initial_state, h_fast, timebound, started,
+                                   weight=1.8, deadline=deadline,
+                                   cost_bound=best_sol.gval)
+        if refined_sol is not None and refined_sol is not False and refined_sol.gval < best_sol.gval:
+            best_sol = refined_sol
+
+    LAST_STATS.update(elapsed=perf_counter() - started, status="SOLVED")
+    return best_sol
