@@ -391,6 +391,8 @@ def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, d
         LAST_STATS["generated"] += len(successors)
 
         for child in successors:
+            if perf_counter() >= deadline:
+                return None
             child_key = child.hashable_state()
 
             if child_key in best_g and child.gval >= best_g[child_key]:
@@ -450,7 +452,10 @@ def solve(initial_state, timebound=120):
         )
         return initial_state
 
-    deadline = started + timebound
+    # TÍNH TOÁN DEADLINE NỘI BỘ VỚI BIÊN DỰ PHÒNG THÍCH ỨNG (A - Tuấn)
+    # Dự phòng 0.25s ở mốc 5s (5%) để triệt tiêu độ trễ của node cuối
+    safety_margin = min(1.0, max(0.25, 0.05 * timebound))
+    effective_deadline = started + timebound - safety_margin
 
     # KHỞI TẠO BỘ HEURISTIC KÉP (B - Hải Anh)
     h_admissible, h_fast = make_heuristics(initial_state)
@@ -463,8 +468,9 @@ def solve(initial_state, timebound=120):
     # PHA 1: Tìm kiếm tối ưu tuyệt đối với w = 1.0 (Ngân sách tối ưu 0.45s)
     # Maps 0-8 giải xong trong < 0.35s và đảm bảo số bước tối ưu 100% khớp BFS
     p1_budget = min(0.45, timebound * 0.15)
+    p1_deadline = min(started + p1_budget, effective_deadline)
     sol = a_star_search(initial_state, h_admissible, timebound, started,
-                        weight=1.0, deadline=started + p1_budget)
+                        weight=1.0, deadline=p1_deadline)
     if sol is False:
         LAST_STATS.update(elapsed=perf_counter() - started, status="FAILED")
         return False
@@ -474,13 +480,13 @@ def solve(initial_state, timebound=120):
 
     # PHA 2: Tìm lời giải hợp lệ nhanh nhất bằng Weighted A* (w = 3.0, h_fast)
     best_sol = a_star_search(initial_state, h_fast, timebound, started,
-                             weight=3.0, deadline=deadline)
+                             weight=3.0, deadline=effective_deadline)
 
     # Nếu h_fast chưa ra, thử pha dự phòng với h_admissible (w = 2.0)
     if best_sol is None or best_sol is False:
-        if perf_counter() < deadline:
+        if perf_counter() < effective_deadline:
             best_sol = a_star_search(initial_state, h_admissible, timebound, started,
-                                     weight=2.0, deadline=deadline)
+                                     weight=2.0, deadline=effective_deadline)
 
     if best_sol is None or best_sol is False:
         LAST_STATS.update(elapsed=perf_counter() - started, status="TIMEOUT")
@@ -488,10 +494,10 @@ def solve(initial_state, timebound=120):
 
     # PHA 3: Focused Refinement (w = 1.8) — Dồn toàn bộ thời gian còn lại gọt bước
     # Tránh phân mảnh thời gian: chỉ kích hoạt khi còn ít nhất 1.5 giây
-    remaining = deadline - perf_counter()
+    remaining = effective_deadline - perf_counter()
     if remaining >= 1.5:
         refined_sol = a_star_search(initial_state, h_fast, timebound, started,
-                                   weight=1.8, deadline=deadline,
+                                   weight=1.8, deadline=effective_deadline,
                                    cost_bound=best_sol.gval)
         if refined_sol is not None and refined_sol is not False and refined_sol.gval < best_sol.gval:
             best_sol = refined_sol
