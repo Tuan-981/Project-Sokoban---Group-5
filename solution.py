@@ -425,7 +425,7 @@ def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, d
                     continue
                 if cost_bound is not None and child.gval + h_p >= cost_bound:
                     continue
-                h_c = heuristic_fn(child)
+                h_c = h_p if heuristic_fn is prune_heuristic_fn else heuristic_fn(child)
                 if h_c >= INF:
                     continue
             else:
@@ -524,20 +524,22 @@ def solve(initial_state, timebound=120):
         LAST_STATS.update(elapsed=perf_counter() - started, status="TIMEOUT")
         return False
 
-    # PHA 3: Focused Refinement (w = 1.8) — Dồn toàn bộ thời gian còn lại gọt bước
-    # Tránh phân mảnh thời gian: chỉ kích hoạt khi còn ít nhất 1.5 giây
-    remaining = effective_deadline - perf_counter()
-    if remaining >= 1.5:
+    # PHA 3: Lặp Refinement (w = 1.8, h_admissible) — Dồn toàn bộ thời gian còn lại siết cận
+    # - Dùng h_admissible cho cả thứ tự frontier lẫn phép cắt cận: tập trung chính xác đường ngắn hơn
+    # - Còn ít nhất 1.5 giây và lần vừa rồi rút được bước thì tiếp tục siết tiếp với cost_bound mới
+    while effective_deadline - perf_counter() >= 1.5:
         refined_sol = a_star_search(
-            initial_state, h_fast, timebound, started,
+            initial_state, h_admissible, timebound, started,
             weight=1.8, deadline=effective_deadline,
             cost_bound=best_sol.gval,
             rescue_on_timeout=True,
             prune_heuristic_fn=h_admissible
         )
-        # Pha 3: nếu hết giờ trả None; nếu cạn frontier trả False (đã chứng minh tối ưu); nếu ra nghiệm thì gọt bước
         if refined_sol and refined_sol.gval < best_sol.gval:
             best_sol = refined_sol
+        else:
+            # Hết giờ (None), cạn frontier (False), hoặc không rút thêm được bước -> dừng lặp
+            break
 
     LAST_STATS.update(elapsed=perf_counter() - started, status="SOLVED")
     return best_sol
