@@ -66,7 +66,7 @@ def to_markdown(maps, results):
         rows.append([
             str(i), str(r["status"]), str(steps),
             str(r.get("expanded", "-")), str(r.get("generated", "-")),
-            str(r.get("unique", "-")), f"{r['time']:.2f}", str(r["valid"]),
+            str(r.get("unique", "-")), f"{r['time']:.3f}", str(r["valid"]),
         ])
 
     widths = [max([len(header[c])] + [len(row[c]) for row in rows])
@@ -123,14 +123,14 @@ def main():
     print("-" * 78)
     print("Tong:", ", ".join(f"{k}={v}" for k, v in counts.items()))
 
+    md = to_markdown(maps, results) if (args.md or args.out) else None
     if args.md:
-        md = to_markdown(maps, results)
         print()
         print(md)
-        if args.out:
-            with open(args.out, "w", encoding="utf-8") as f:
-                f.write(md + "\n")
-            print("Da ghi:", args.out)
+    if args.out:
+        with open(args.out, "w", encoding="utf-8") as f:
+            f.write(md + "\n")
+        print("Da ghi:", args.out)
     
     
 
