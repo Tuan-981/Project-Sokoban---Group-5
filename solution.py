@@ -340,7 +340,7 @@ def make_heuristics(initial_state, dung_2x2=True):
 
 # ===== VÙNG 4: Thuật toán tìm kiếm Weighted A* với Cost-Bound Pruning (A - Tuấn) =====
 
-def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, deadline=None, cost_bound=None, rescue_on_timeout=True):
+def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, deadline=None, cost_bound=None, rescue_on_timeout=True, prune_heuristic_fn=None):
     """
     Thuật toán tìm kiếm Weighted A* nâng cấp Tuần 4:
       - f(s) = g(s) + weight * h(s)
@@ -355,8 +355,11 @@ def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, d
     h_init = heuristic_fn(initial_state)
     if h_init >= INF:
         return False
-    if cost_bound is not None and initial_state.gval + h_init >= cost_bound:
-        return None
+    h_init_prune = prune_heuristic_fn(initial_state) if prune_heuristic_fn is not None else h_init
+    if h_init_prune >= INF:
+        return False
+    if cost_bound is not None and initial_state.gval + h_init_prune >= cost_bound:
+        return False
 
     frontier = []
     f_init = initial_state.gval + weight * h_init
@@ -377,8 +380,9 @@ def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, d
         if current.gval > best_g.get(curr_key, current.gval):
             continue
 
-        # Cắt tỉa cận trên: nếu ước lượng tổng chi phí không thể vượt qua nghiệm cũ -> bỏ qua
-        if cost_bound is not None and current.gval + h_val >= cost_bound:
+        # Cắt tỉa cận trên: dùng prune_heuristic_fn (h_admissible ở Pha 3) để an toàn tuyệt đối
+        h_prune = prune_heuristic_fn(current) if prune_heuristic_fn is not None else h_val
+        if cost_bound is not None and current.gval + h_prune >= cost_bound:
             continue
 
         LAST_STATS["expanded"] += 1
@@ -414,15 +418,22 @@ def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, d
             if child_key in best_g and child.gval >= best_g[child_key]:
                 continue
 
-            h_c = heuristic_fn(child)
-
-            # Cắt tỉa trạng thái rơi vào ô chết hoặc deadlock khối 2x2
-            if h_c >= INF:
-                continue
-
-            # Tỉa nhánh con ngay khi sinh nếu vượt quá cost_bound
-            if cost_bound is not None and child.gval + h_c >= cost_bound:
-                continue
+            # Cắt tỉa nhánh con: nếu có prune_heuristic_fn (h_admissible), cắt cận chuẩn xác trước
+            if prune_heuristic_fn is not None:
+                h_p = prune_heuristic_fn(child)
+                if h_p >= INF:
+                    continue
+                if cost_bound is not None and child.gval + h_p >= cost_bound:
+                    continue
+                h_c = heuristic_fn(child)
+                if h_c >= INF:
+                    continue
+            else:
+                h_c = heuristic_fn(child)
+                if h_c >= INF:
+                    continue
+                if cost_bound is not None and child.gval + h_c >= cost_bound:
+                    continue
 
             if child_key not in best_g:
                 LAST_STATS["unique"] += 1
@@ -434,7 +445,8 @@ def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, d
         if timed_out:
             return None
 
-    return None
+    # Frontier cạn kiệt tự nhiên: toàn bộ không gian hợp lệ < cost_bound đã duyệt hết
+    return False
 
 
 # ===== VÙNG 5: Hàm solve() và quản lý thời gian ARA* Tinh Gọn (A - Tuấn) =====
@@ -516,11 +528,15 @@ def solve(initial_state, timebound=120):
     # Tránh phân mảnh thời gian: chỉ kích hoạt khi còn ít nhất 1.5 giây
     remaining = effective_deadline - perf_counter()
     if remaining >= 1.5:
-        refined_sol = a_star_search(initial_state, h_fast, timebound, started,
-                                   weight=1.8, deadline=effective_deadline,
-                                   cost_bound=best_sol.gval)
-        # Pha 3 hết giờ trả None: giữ nghiệm pha 2.
-        if refined_sol is not None and refined_sol is not False and refined_sol.gval < best_sol.gval:
+        refined_sol = a_star_search(
+            initial_state, h_fast, timebound, started,
+            weight=1.8, deadline=effective_deadline,
+            cost_bound=best_sol.gval,
+            rescue_on_timeout=True,
+            prune_heuristic_fn=h_admissible
+        )
+        # Pha 3: nếu hết giờ trả None; nếu cạn frontier trả False (đã chứng minh tối ưu); nếu ra nghiệm thì gọt bước
+        if refined_sol and refined_sol.gval < best_sol.gval:
             best_sol = refined_sol
 
     LAST_STATS.update(elapsed=perf_counter() - started, status="SOLVED")
