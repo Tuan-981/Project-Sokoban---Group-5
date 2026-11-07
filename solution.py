@@ -340,7 +340,7 @@ def make_heuristics(initial_state, dung_2x2=True):
 
 # ===== VÙNG 4: Thuật toán tìm kiếm Weighted A* với Cost-Bound Pruning (A - Tuấn) =====
 
-def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, deadline=None, cost_bound=None):
+def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, deadline=None, cost_bound=None, rescue_on_timeout=True):
     """
     Thuật toán tìm kiếm Weighted A* nâng cấp Tuần 4:
       - f(s) = g(s) + weight * h(s)
@@ -397,6 +397,8 @@ def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, d
             if not timed_out and perf_counter() >= deadline:
                 timed_out = True
             if timed_out:
+                if not rescue_on_timeout:
+                    continue
                 if cost_bound is not None and child.gval >= cost_bound:
                     continue
                 if not sokoban_goal_state(child):
@@ -484,10 +486,11 @@ def solve(initial_state, timebound=120):
 
     # PHA 1: Tìm kiếm tối ưu tuyệt đối với w = 1.0 (Ngân sách tối ưu 0.45s)
     # Maps 0-8 giải xong trong < 0.35s và đảm bảo số bước tối ưu 100% khớp BFS
+    # rescue_on_timeout=False: Chỉ nhận đích khi POP để bảo toàn tính tối ưu toán học của A*
     p1_budget = min(0.45, timebound * 0.15)
     p1_deadline = min(started + p1_budget, effective_deadline)
     sol = a_star_search(initial_state, h_admissible, timebound, started,
-                        weight=1.0, deadline=p1_deadline)
+                        weight=1.0, deadline=p1_deadline, rescue_on_timeout=False)
     if sol is False:
         LAST_STATS.update(elapsed=perf_counter() - started, status="FAILED")
         return False
