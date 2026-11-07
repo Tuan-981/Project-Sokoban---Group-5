@@ -339,6 +339,9 @@ def make_heuristics(initial_state, dung_2x2=True):
 
 
 # ===== VÙNG 4: Thuật toán tìm kiếm Weighted A* với Cost-Bound Pruning (A - Tuấn) =====
+def _search_key(state):
+    """Khóa tìm kiếm chuẩn hóa thứ tự robot; không thay đổi trạng thái thật."""
+    return (tuple(sorted(state.robots)), state.boxes)
 
 def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, deadline=None, cost_bound=None, rescue_on_timeout=True, prune_heuristic_fn=None):
     """
@@ -365,7 +368,7 @@ def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, d
     f_init = initial_state.gval + weight * h_init
     heapq.heappush(frontier, (f_init, h_init, next(tie_counter), initial_state))
 
-    init_key = initial_state.hashable_state()
+    init_key = _search_key(initial_state)
     best_g = {init_key: initial_state.gval}
     if LAST_STATS["unique"] == 0:
         LAST_STATS["unique"] = 1
@@ -375,7 +378,7 @@ def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, d
             return None
 
         f_val, h_val, _, current = heapq.heappop(frontier)
-        curr_key = current.hashable_state()
+        curr_key = _search_key(current)
 
         if current.gval > best_g.get(curr_key, current.gval):
             continue
@@ -407,13 +410,13 @@ def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, d
                     continue
                 if not sokoban_goal_state(child):
                     continue
-                child_key = child.hashable_state()
+                child_key = _search_key(child)
                 if child_key in best_g and child.gval >= best_g[child_key]:
                     continue
                 if child_key not in best_g:
                     LAST_STATS["unique"] += 1
                 return child
-            child_key = child.hashable_state()
+            child_key = _search_key(child)
 
             if child_key in best_g and child.gval >= best_g[child_key]:
                 continue
