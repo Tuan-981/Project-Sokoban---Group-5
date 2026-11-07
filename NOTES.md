@@ -1016,7 +1016,7 @@ Vì vậy, tie-break theo `h` là một cải tiến đáng giữ lại và ti�
 - test_heuristic.py kiểm tra h_admissible <= chi phí còn lại dọc đường tối ưu trên map 0..8: đạt.
 - Chưa chạy thực nghiệm trên map ngẫu nhiên. h_fast chưa chứng minh admissible nên chỉ dùng ở w > 1.
 
-### PHẦN CÒN 
-- solve dùng deadline = started + timebound không có biên an toàn, chạy quá timebound khoảng 0,06-0,17 s.
-  Đề xuất: deadline = started + timebound - min(1.0, 0.03 * timebound).
-  
+### Ghi chú chuyển cho A (Vùng 5, không phải phần còn thiếu của B)
+- Khi đo, solve() chạy quá timebound khoảng 0,06-0,17 s vì deadline = started + timebound không có biên.
+  Đề xuất để A đánh giá: deadline = started + timebound - min(1.0, 0.03 * timebound).
+  B không sửa code này; quyết định thuộc về A.
