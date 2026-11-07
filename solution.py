@@ -390,9 +390,23 @@ def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, d
         successors = current.successors()
         LAST_STATS["generated"] += len(successors)
 
+        # Hết giờ giữa danh sách con: successors() đã trả phí. Xét nốt các con
+        # đã sinh; gặp đích còn ngắn hơn cận thì nhận, không gọi heuristic nữa.
+        timed_out = False
         for child in successors:
-            if perf_counter() >= deadline:
-                return None
+            if not timed_out and perf_counter() >= deadline:
+                timed_out = True
+            if timed_out:
+                if cost_bound is not None and child.gval >= cost_bound:
+                    continue
+                if not sokoban_goal_state(child):
+                    continue
+                child_key = child.hashable_state()
+                if child_key in best_g and child.gval >= best_g[child_key]:
+                    continue
+                if child_key not in best_g:
+                    LAST_STATS["unique"] += 1
+                return child
             child_key = child.hashable_state()
 
             if child_key in best_g and child.gval >= best_g[child_key]:
@@ -414,6 +428,9 @@ def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, d
 
             f_child = child.gval + weight * h_c
             heapq.heappush(frontier, (f_child, h_c, next(tie_counter), child))
+
+        if timed_out:
+            return None
 
     return None
 
@@ -452,9 +469,9 @@ def solve(initial_state, timebound=120):
         )
         return initial_state
 
-    # TÍNH TOÁN DEADLINE NỘI BỘ VỚI BIÊN DỰ PHÒNG THÍCH ỨNG (A - Tuấn)
-    # Dự phòng 0.25s ở mốc 5s (5%) để triệt tiêu độ trễ của node cuối
-    safety_margin = min(1.0, max(0.25, 0.05 * timebound))
+    # Biên = min(5% hạn giờ, 0.30s). Không sàn 0.25s: hạn ngắn vẫn còn giờ tìm.
+    # Hạn 5s dành 0.25s. Hạn 0.2s dành 0.01s.
+    safety_margin = min(0.30, 0.05 * timebound)
     effective_deadline = started + timebound - safety_margin
 
     # KHỞI TẠO BỘ HEURISTIC KÉP (B - Hải Anh)
@@ -499,6 +516,7 @@ def solve(initial_state, timebound=120):
         refined_sol = a_star_search(initial_state, h_fast, timebound, started,
                                    weight=1.8, deadline=effective_deadline,
                                    cost_bound=best_sol.gval)
+        # Pha 3 hết giờ trả None: giữ nghiệm pha 2.
         if refined_sol is not None and refined_sol is not False and refined_sol.gval < best_sol.gval:
             best_sol = refined_sol
 
