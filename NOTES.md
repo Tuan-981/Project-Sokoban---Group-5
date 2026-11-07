@@ -1000,7 +1000,51 @@ Vì vậy, tie-break theo `h` là một cải tiến đáng giữ lại và ti�
 - Lệnh profiler: `python profile_solver.py --map <map> --timebound 10`
 
 ### Kết quả sau tối ưu
-[Chèn bảng cùng định dạng để so sánh]
+ Benchmark sau tối ưu:
+| Map | Trạng thái | Bước | Expanded TB | Generated TB | Unique TB | Thời gian TB (s) | Valid |
+|---:|---|---:|---:|---:|---:|---:|:---:|
+| 0 | SOLVED | 16 | 4.054 | 20.401 | 5.780 | 0,093 | Có |
+| 5 | SOLVED | 30 | 7.047 | 33.745 | 8.206 | 0,143 | Có |
+| 10 | SOLVED | 30 | 75.263 | 662.362 | 236.712 | 4,493 | Có |
+| 14 | SOLVED | 25 | 21.994 | 141.083 | 48.371 | 0,651 | Có |
+
+Kết quả cProfile:
+| Map | Bước | Expanded | Generated | Unique | Thời gian profile (s) | Hàm tốn thời gian nổi bật |
+|---:|---:|---:|---:|---:|---:|---|
+| 0 | 16 | 4.054 | 20.401 | 5.780 | 0,180 | `successors()` 0,087s; `h_admissible()` 0,052s |
+| 5 | 30 | 7.047 | 33.745 | 8.206 | 0,287 | `successors()` 0,147s; `h_admissible()` 0,069s |
+| 10 | 30 | 70.092 | 618.028 | 221.918 | 9,525 | `h_fast()` 4,420s; `successors()` 3,296s; `buoc_di_bo()` 2,211s |
+| 14 | 25 | 13.663 | 87.343 | 32.940 | 0,897 | `successors()` 0,346s; `h_admissible()` 0,248s; `h_fast()` 0,214s |
+
+Benchmark đủ 20 map:
+Kết quả bạn gửi cho thấy 20/20 map SOLVED và Valid=True. Tuy nhiên, thời gian benchmark của Map 10, 15, 16, 17, 18 và 19 vượt 5 giây một chút. Nên ghi rõ trong phần nhận xét: đạt 20/20 lời giải hợp lệ, nhưng một số map vượt nhẹ mốc 5 giây.
+
+### Thay đổi
+- Chuẩn hóa vị trí robot trong khóa tìm kiếm bằng `_search_key`, dùng tuple robot đã sắp xếp.
+- Giữ nguyên thứ tự robot trong từng trạng thái để bảo toàn action và đường dẫn parent.
+
+### Benchmark trước/sau
+Timebound: 5 giây. Mỗi map chạy 3 lần; bảng ghi trung bình. Map 0, 5, 10 và 14 được dùng để so sánh.
+
+| Map | Steps trước → sau | Expanded trước → sau | Generated trước → sau | Unique trước → sau | Time (s) trước → sau |
+|---:|---:|---:|---:|---:|---:|
+| 0 | 16 → 16 | 6,299 → 4,054 | 31,957 → 20,401 | 9,226 → 5,780 | 0.147 → 0.093 |
+| 5 | 30 → 30 | 11,016 → 7,047 | 52,680 → 33,745 | 13,510 → 8,206 | 0.223 → 0.143 |
+| 10 | 36 → 30 | 89,965 → 75,263 | 792,412 → 662,362 | 306,710 → 236,712 | 5.100 → 4.493 |
+| 14 | 25 → 25 | 23,545 → 21,994 | 151,102 → 141,083 | 56,326 → 48,371 | 0.670 → 0.651 |
+
+### Kiểm tra
+- Sau thay đổi, cả 4 map đều SOLVED và lời giải đều Valid.
+- Chạy toàn bộ map sau thay đổi: SOLVED = 20/20; các lời giải đều Valid.
+- Map 10 tìm được lời giải 30 bước sau thay đổi, so với 36 bước trước đó.
+
+### cProfile
+- Trước thay đổi, các phần tốn thời gian chính là sinh successor (`successors`) và heuristic, gồm `h_admissible`, `h_fast` và kiểm tra khối 2x2.
+- Sau thay đổi, các phần này vẫn chiếm phần lớn thời gian. `_search_key` xuất hiện thêm trong profile, nhưng số node duyệt giảm trên cả bốn map benchmark.
+- Kết quả benchmark cho thấy giảm số node và thời gian ở cả bốn map; mức cải thiện nhỏ hơn ở Map 14.
+
+### Ghi chú
+Số liệu thời gian có thể dao động giữa các lần chạy; kết quả trên là trung bình của ba lần đo với cùng timebound.
 
 ### Baseline trước tối ưu
 - Lệnh benchmark: `python benchmark.py --maps 0 5 10 14 --timebound 10`
