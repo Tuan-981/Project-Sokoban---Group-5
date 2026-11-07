@@ -10,6 +10,32 @@ def load_maps(set_name):
     from sokoban import PROBLEMS
     return list(PROBLEMS)
 
+def load_meta(set_name):
+    """Tên map và số bước mong đợi (chỉ có ở bộ custom), ngược lại trả None."""
+    if set_name == "custom":
+        from custom_maps import MAPS
+        return [(name, expected) for name, _, expected in MAPS]
+    return None
+
+
+def so_sanh(expected, r):
+    """Đối chiếu kết quả với số bước mong đợi (chỉ dùng cho bộ custom).
+    expected = None nghĩa là map vô nghiệm."""
+    if r["status"] == "CRASH":
+        return "LỖI: crash"
+    if r["status"] == "TIMEOUT":
+        return "không kết luận"            # hết giờ: chưa biết đúng hay sai
+    if r["valid"] is False:
+        return "LỖI: lời giải sai"
+    if expected is None:                   # map vô nghiệm: không tính hiệu số
+        if r["steps"] is None:
+            return "khớp vô nghiệm"
+        return "BẤT THƯỜNG: tìm được nghiệm"
+    if r["steps"] is None:
+        return "KHÔNG KHỚP: không giải được"
+    hieu = r["steps"] - expected
+    return "khớp" if hieu == 0 else f"lệch {hieu:+d}"
+
 
 def run_worker(index, timebound, solver, map_set):
     """Chạy TRONG tiến trình con: giải map số index, in 1 dòng RESULT."""
@@ -54,20 +80,32 @@ def run_one(index, timebound, solver, map_set):
     return {"status": "CRASH", "steps": None, "time": time.time() - start,
             "valid": "-", "msg": ""}
 
-
-def to_markdown(maps, results):
-    """Biến kết quả thành bảng Markdown, căn cột thẳng hàng."""
-    header = ["Map", "Status", "Steps", "Expanded", "Generated", "Unique", "Time (s)", "Valid"]
-    right = {2, 3, 4, 5, 6}  # các cột số: căn phải
+def to_markdown(maps, results, meta=None):
+    """Bảng Markdown căn cột. meta (chỉ bộ custom): danh sách (tên, số bước mong đợi)."""
+    cot = [("Map", False)]
+    if meta:
+        cot.append(("Name", False))
+    cot += [("Status", False), ("Steps", True)]
+    if meta:
+        cot += [("Expected", False), ("Check", False)]
+    cot += [("Expanded", True), ("Generated", True), ("Unique", True),
+            ("Time (s)", True), ("Valid", False)]
+    header = [ten for ten, _ in cot]
+    right = {c for c, (_, phai) in enumerate(cot) if phai}
 
     rows = []
     for i, r in zip(maps, results):
         steps = "-" if r["steps"] is None else r["steps"]
-        rows.append([
-            str(i), str(r["status"]), str(steps),
-            str(r.get("expanded", "-")), str(r.get("generated", "-")),
-            str(r.get("unique", "-")), f"{r['time']:.3f}", str(r["valid"]),
-        ])
+        row = [str(i)]
+        if meta:
+            row.append(meta[i][0])
+        row += [str(r["status"]), str(steps)]
+        if meta:
+            exp = meta[i][1]
+            row += ["vô nghiệm" if exp is None else str(exp), so_sanh(exp, r)]
+        row += [str(r.get("expanded", "-")), str(r.get("generated", "-")),
+                str(r.get("unique", "-")), f"{r['time']:.3f}", str(r["valid"])]
+        rows.append(row)
 
     widths = [max([len(header[c])] + [len(row[c]) for row in rows])
               for c in range(len(header))]
@@ -123,7 +161,7 @@ def main():
     print("-" * 78)
     print("Tong:", ", ".join(f"{k}={v}" for k, v in counts.items()))
 
-    md = to_markdown(maps, results) if (args.md or args.out) else None
+    md = to_markdown(maps, results, load_meta(args.map_set)) if (args.md or args.out) else None
     if args.md:
         print()
         print(md)
