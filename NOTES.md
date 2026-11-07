@@ -835,7 +835,7 @@ Vì vậy, tie-break theo `h` là một cải tiến đáng giữ lại và ti�
 **Vai trò Member C:** Thực hiện thay đổi chiến lược tie-break, xây dựng benchmark riêng, kiểm chứng kết quả và phân tích mức cải thiện hiệu năng.
 
 
-### TUẦN 3:
+# TUẦN 3:
 
 ## Tuần 3 — Hải Anh (B): h_admissible, h_fast và ô chết khối 2x2
 
@@ -978,6 +978,29 @@ Vì vậy, tie-break theo `h` là một cải tiến đáng giữ lại và ti�
 | 19 | SOLVED | 86 | 16,268 | 150,783 | 56,826 | 1.74 | True |
 
 **Tổng kết:** Đạt tỷ lệ 20/20 maps (100% SOLVED), không có map nào bị TIMEOUT trong ngân sách 5 giây.
+## Tuần 3 — Long: Giảm đối xứng robot
+
+### Baseline trước tối ưu
+- Lệnh benchmark: `python benchmark.py --maps 0 5 10 14 --timebound 5`
+- Timebound: 5 giây/map
+- Benchmark lặp: 3 lần
+
+| Map | Trạng thái / Valid | Steps | Expanded TB | Generated TB | Unique TB | Time TB (s) | Hàm nổi bật trong profile |
+|---:|---|---:|---:|---:|---:|---:|---|
+| 0 | SOLVED / True | 16 | 6.299 | 31.957 | 9.226 | 0,15 | `successors()` — cumtime 0,135s; `h_admissible()` — 0,080s |
+| 5 | SOLVED / True | 30 | 11.016 | 52.680 | 13.510 | 0,22 | `successors()` — cumtime 0,212s; `h_admissible()` — 0,105s |
+| 10 | SOLVED / True | 36 | 88.559 | 779.578 | 300.782 | 5,10 | `h_fast()` — cumtime 4,959s; `successors()` — cumtime 3,474s |
+| 14 | SOLVED / True | 25 | 23.545 | 151.102 | 55.993 | 0,67 | `successors()` — cumtime 0,389s; `h_admissible()` — 0,299s |
+
+### Phân tích cProfile
+- Map 0: `successors()` có cumtime 0,135s; tiếp theo là `h_admissible()` (0,080s).
+- Map 5: `successors()` có cumtime 0,212s; tiếp theo là `h_admissible()` (0,105s).
+- Map 10: `h_fast()` có cumtime 4,959s; `successors()` 3,474s; các hàm con đáng chú ý là `buoc_di_bo()` (2,441s) và `ket_2x2()` (2,117s).
+- Map 14: `successors()` có cumtime 0,389s; tiếp theo là `h_admissible()` (0,299s) và `h_fast()` (0,282s).
+- Lệnh profiler: `python profile_solver.py --map <map> --timebound 10`
+
+### Kết quả sau tối ưu
+[Chèn bảng cùng định dạng để so sánh]
 
 
 ## Tuần 3 - Trâm(D): Bộ 5 map tự tạo ; nâng cấp benchmark 
