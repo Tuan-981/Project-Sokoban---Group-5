@@ -458,8 +458,8 @@ def solve(initial_state, timebound=120):
                Giải quyết Maps 0-8 với số bước tối ưu 100% khớp BFS.
       - Pha 2 (Rapid Feasible Solution): Weighted A* (w = 3.0, h_fast) tìm nghiệm hợp lệ đầu tiên,
                chống hoàn toàn rủi ro Timeout trên maps lớn.
-      - Pha 3 (Focused Refinement w = 1.8): Nếu còn >= 1.5s, dồn toàn bộ thời gian còn lại
-               để gọt ngắn số bước với cost_bound = best_solution.gval (không phân mảnh thời gian).
+      - Pha 3 (Focused Refinement w = 1.8): Nếu còn >= 1.5s, mỗi lượt gọt có hạn riêng 2.0s.
+               Lượt không rút được bước dừng trong hạn đó, không chạy tới hạn chung.
     """
     global LAST_STATS
     started = perf_counter()
@@ -524,13 +524,16 @@ def solve(initial_state, timebound=120):
         LAST_STATS.update(elapsed=perf_counter() - started, status="TIMEOUT")
         return False
 
-    # PHA 3: Lặp Refinement (w = 1.8, h_admissible) — Dồn toàn bộ thời gian còn lại siết cận
-    # - Dùng h_admissible cho cả thứ tự frontier lẫn phép cắt cận: tập trung chính xác đường ngắn hơn
-    # - Còn ít nhất 1.5 giây và lần vừa rồi rút được bước thì tiếp tục siết tiếp với cost_bound mới
+    # PHA 3: Lặp Refinement (w = 1.8, h_admissible)
+    # - Frontier và cận đều dùng h_admissible. Chưa đổi sang h_fast cho đến khi đo lại Map 10 và 12.
+    # - Mỗi lượt có hạn riêng 2.0s. Lượt không rút được bước dừng trong hạn này.
+    # - Còn ít nhất 1.5 giây và lần vừa rồi rút được bước thì siết tiếp với cost_bound mới.
+    round_budget = 2.0
     while effective_deadline - perf_counter() >= 1.5:
+        round_deadline = min(effective_deadline, perf_counter() + round_budget)
         refined_sol = a_star_search(
             initial_state, h_admissible, timebound, started,
-            weight=1.8, deadline=effective_deadline,
+            weight=1.8, deadline=round_deadline,
             cost_bound=best_sol.gval,
             rescue_on_timeout=True,
             prune_heuristic_fn=h_admissible
