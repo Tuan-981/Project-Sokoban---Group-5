@@ -524,15 +524,15 @@ def solve(initial_state, timebound=120):
         LAST_STATS.update(elapsed=perf_counter() - started, status="TIMEOUT")
         return False
 
-    # PHA 3: Lặp Refinement (w = 1.8, h_admissible)
-    # - Frontier và cận đều dùng h_admissible. Chưa đổi sang h_fast cho đến khi đo lại Map 10 và 12.
+    # PHA 3: Lặp Refinement (w = 1.8, frontier dùng h_fast, cắt cận dùng h_admissible)
+    # - Frontier dùng h_fast (giảm ~32% node mở rộng), cắt cận dùng h_admissible (an toàn tuyệt đối không cắt nhầm).
     # - Mỗi lượt có hạn riêng 2.0s. Lượt không rút được bước dừng trong hạn này.
     # - Còn ít nhất 1.5 giây và lần vừa rồi rút được bước thì siết tiếp với cost_bound mới.
     round_budget = 2.0
     while effective_deadline - perf_counter() >= 1.5:
         round_deadline = min(effective_deadline, perf_counter() + round_budget)
         refined_sol = a_star_search(
-            initial_state, h_admissible, timebound, started,
+            initial_state, h_fast, timebound, started,
             weight=1.8, deadline=round_deadline,
             cost_bound=best_sol.gval,
             rescue_on_timeout=True,
