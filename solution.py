@@ -19,9 +19,6 @@ LAST_STATS = {
     "elapsed": 0.0,  # Thời gian chạy tính bằng giây
     "status": "NOT_RUN",  # NOT_RUN, RUNNING, SOLVED, TIMEOUT hoặc FAILED
 }
-_UNIQUE_STATE_KEYS = set()
-
-
 # ===== VÙNG 2: Ô chết và bảng khoảng cách (B - Hải Anh) =====
 
 def trong_ban_va_trong(state, c):
@@ -344,7 +341,7 @@ def _search_key(state):
     """Khóa tìm kiếm chuẩn hóa thứ tự robot; không thay đổi trạng thái thật."""
     return (tuple(sorted(state.robots)), state.boxes)
 
-def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, deadline=None, cost_bound=None, rescue_on_timeout=True, prune_heuristic_fn=None):
+def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, deadline=None, cost_bound=None, rescue_on_timeout=True, prune_heuristic_fn=None, unique_seen=None):
     """
     Thuật toán tìm kiếm Weighted A* nâng cấp Tuần 4:
       - f(s) = g(s) + weight * h(s)
@@ -355,10 +352,12 @@ def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, d
     if deadline is None:
         deadline = started + timebound
     tie_counter = itertools.count()
+    if unique_seen is None:
+        unique_seen = set()
 
     init_state_key = initial_state.hashable_state()
-    if init_state_key not in _UNIQUE_STATE_KEYS:
-        _UNIQUE_STATE_KEYS.add(init_state_key)
+    if init_state_key not in unique_seen:
+        unique_seen.add(init_state_key)
         LAST_STATS["unique"] += 1
 
     h_init = heuristic_fn(initial_state)
@@ -406,8 +405,8 @@ def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, d
         timed_out = False
         for child in successors:
             state_key = child.hashable_state()
-            if state_key not in _UNIQUE_STATE_KEYS:
-                _UNIQUE_STATE_KEYS.add(state_key)
+            if state_key not in unique_seen:
+                unique_seen.add(state_key)
                 LAST_STATS["unique"] += 1
 
             if not timed_out and perf_counter() >= deadline:
@@ -470,9 +469,8 @@ def solve(initial_state, timebound=120):
                để gọt ngắn số bước với cost_bound = best_solution.gval (không phân mảnh thời gian).
     """
     global LAST_STATS
-    global _UNIQUE_STATE_KEYS
     started = perf_counter()
-    _UNIQUE_STATE_KEYS = set()
+    unique_seen = set()
     LAST_STATS = {
         "expanded": 0,
         "generated": 0,
@@ -481,13 +479,16 @@ def solve(initial_state, timebound=120):
         "status": "RUNNING",
     }
 
+    # Count the initial configuration once, including on early-return paths.
+    unique_seen.add(initial_state.hashable_state())
+    LAST_STATS["unique"] = 1
+
     if timebound <= 0:
         LAST_STATS.update(elapsed=perf_counter() - started, status="TIMEOUT")
         return False
 
     if sokoban_goal_state(initial_state):
         LAST_STATS.update(
-            unique=1,
             elapsed=perf_counter() - started,
             status="SOLVED",
         )
@@ -512,7 +513,8 @@ def solve(initial_state, timebound=120):
     p1_budget = min(0.45, timebound * 0.15)
     p1_deadline = min(started + p1_budget, effective_deadline)
     sol = a_star_search(initial_state, h_admissible, timebound, started,
-                        weight=1.0, deadline=p1_deadline, rescue_on_timeout=False)
+                        weight=1.0, deadline=p1_deadline, rescue_on_timeout=False,
+                        unique_seen=unique_seen)
     if sol is False:
         LAST_STATS.update(elapsed=perf_counter() - started, status="FAILED")
         return False
@@ -522,13 +524,15 @@ def solve(initial_state, timebound=120):
 
     # PHA 2: Tìm lời giải hợp lệ nhanh nhất bằng Weighted A* (w = 3.0, h_fast)
     best_sol = a_star_search(initial_state, h_fast, timebound, started,
-                             weight=3.0, deadline=effective_deadline)
+                             weight=3.0, deadline=effective_deadline,
+                             unique_seen=unique_seen)
 
     # Nếu h_fast chưa ra, thử pha dự phòng với h_admissible (w = 2.0)
     if best_sol is None or best_sol is False:
         if perf_counter() < effective_deadline:
             best_sol = a_star_search(initial_state, h_admissible, timebound, started,
-                                     weight=2.0, deadline=effective_deadline)
+                                     weight=2.0, deadline=effective_deadline,
+                                     unique_seen=unique_seen)
 
     if best_sol is None or best_sol is False:
         LAST_STATS.update(elapsed=perf_counter() - started, status="TIMEOUT")
@@ -543,7 +547,8 @@ def solve(initial_state, timebound=120):
             weight=1.8, deadline=effective_deadline,
             cost_bound=best_sol.gval,
             rescue_on_timeout=True,
-            prune_heuristic_fn=h_admissible
+            prune_heuristic_fn=h_admissible,
+            unique_seen=unique_seen
         )
         # Pha 3: nếu hết giờ trả None; nếu cạn frontier trả False (đã chứng minh tối ưu); nếu ra nghiệm thì gọt bước
         if refined_sol and refined_sol.gval < best_sol.gval:

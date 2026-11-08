@@ -1001,73 +1001,81 @@ Vì vậy, tie-break theo `h` là một cải tiến đáng giữ lại và ti�
 
 ### Kết quả sau tối ưu
  Benchmark sau tối ưu:
-| Map | Trạng thái | Bước | Expanded TB | Generated TB | Unique TB | Thời gian TB (s) | Valid |
-|---:|---|---:|---:|---:|---:|---:|:---:|
-| 0 | SOLVED | 16 | 4.054 | 20.401 | 5.780 | 0,093 | Có |
-| 5 | SOLVED | 30 | 7.047 | 33.745 | 8.206 | 0,143 | Có |
-| 10 | SOLVED | 30 | 75.263 | 662.362 | 236.712 | 4,493 | Có |
-| 14 | SOLVED | 25 | 21.994 | 141.083 | 48.371 | 0,651 | Có |
+| Map | Status | Steps | Expanded | Generated | Unique | Time (s) | Valid |
+|---:|---|---:|---:|---:|---:|---:|---|
+| 0 | SOLVED | 16 | 4,054 | 20,401 | 7,637 | **0,125** | True |
+| 5 | SOLVED | 30 | 7,047 | 33,745 | 10,820 | **0,157** | True |
+| 10 | SOLVED | 30 | 73,999.33 | 651,283.33 | 259,332.33 | **5,057** | True |
+| 14 | SOLVED | 25 | 20,198.67 | 129,560 | 39,599.67 | **0,682** | True |
 
 Kết quả cProfile:
 | Map | Bước | Expanded | Generated | Unique | Thời gian profile (s) | Hàm tốn thời gian nổi bật |
 |---:|---:|---:|---:|---:|---:|---|
-| 0 | 16 | 4.054 | 20.401 | 5.780 | 0,180 | `successors()` 0,087s; `h_admissible()` 0,052s |
-| 5 | 30 | 7.047 | 33.745 | 8.206 | 0,287 | `successors()` 0,147s; `h_admissible()` 0,069s |
-| 10 | 30 | 70.092 | 618.028 | 221.918 | 9,525 | `h_fast()` 4,420s; `successors()` 3,296s; `buoc_di_bo()` 2,211s |
-| 14 | 25 | 13.663 | 87.343 | 32.940 | 0,897 | `successors()` 0,346s; `h_admissible()` 0,248s; `h_fast()` 0,214s |
+| 0 | 16 | 4.054 | 20.401 | 7.637 | 0,203 | `successors()` 0,090s; `h_admissible()` 0,056s |
+| 5 | 30 | 7.047 | 33.745 | 10.820 | 0,309 | `successors()` 0,149s; `h_admissible()` 0,068s |
+| 10 | 30 | 69.318 | 611.219 | 245.742 | 9,772 | `h_fast()` 4,250s; `successors()` 3,352s; `h_admissible()` 2,170s; `buoc_di_bo()` 2,128s |
+| 14 | 25 | 12.668 | 81.129 | 25.994 | 1,009 | `successors()` 0,371s; `h_admissible()` 0,255s; `h_fast()` 0,246s |
 
 Benchmark đủ 20 map:
 | Map | Status | Steps | Expanded | Generated | Unique | Time (s) | Valid |
 | --- | ------ | ----: | -------: | --------: | -----: | -------: | ----- |
 | 0   | SOLVED |    16 |     4054 |     20401 |   7637 |     0,10 | True  |
 | 1   | SOLVED |     4 |       20 |       106 |     57 |     0,00 | True  |
-| 2   | SOLVED |    21 |     1231 |      3342 |   1551 |     0,02 | True  |
+| 2   | SOLVED |    21 |     1231 |      3342 |   1551 |     0,04 | True  |
 | 3   | SOLVED |    10 |      358 |      2292 |    933 |     0,01 | True  |
 | 4   | SOLVED |     8 |      165 |      1088 |    408 |     0,00 | True  |
-| 5   | SOLVED |    30 |     7047 |     33745 |  10820 |     0,17 | True  |
+| 5   | SOLVED |    30 |     7047 |     33745 |  10820 |     0,15 | True  |
 | 6   | SOLVED |    16 |      384 |      1837 |    721 |     0,01 | True  |
 | 7   | SOLVED |    41 |      841 |      2063 |    917 |     0,01 | True  |
-| 8   | SOLVED |    14 |     3241 |     29526 |  11154 |     0,15 | True  |
-| 9   | SOLVED |    24 |    13405 |    145765 |  61853 |     1,18 | True  |
-| 10  | SOLVED |    30 |    73577 |    647757 | 258385 |     4,97 | True  |
-| 11  | SOLVED |    26 |    12144 |    105642 |  42486 |     0,53 | True  |
-| 12  | SOLVED |    24 |    19018 |    162260 |  55852 |     0,83 | True  |
-| 13  | SOLVED |    27 |    17492 |    113711 |  42421 |     0,51 | True  |
-| 14  | SOLVED |    25 |    19980 |    128134 |  39039 |     0,66 | True  |
-| 15  | SOLVED |    73 |   133811 |   1249463 | 554201 |    10,18 | True  |
-| 16  | SOLVED |    54 |    90667 |    897113 | 357121 |     6,34 | True  |
-| 17  | SOLVED |    98 |   117451 |   1139010 | 507348 |    10,13 | True  |
-| 18  | SOLVED |   101 |   110698 |   1084930 | 466432 |    10,13 | True  |
-| 19  | SOLVED |    86 |   118253 |   1079415 | 501994 |    10,15 | True  |
+| 8   | SOLVED |    14 |     3241 |     29526 |  11154 |     0,14 | True  |
+| 9   | SOLVED |    24 |    12773 |    138758 |  59025 |     1,25 | True  |
+| 10  | SOLVED |    30 |    72695 |    640246 | 255287 |     5,09 | True  |
+| 11  | SOLVED |    26 |    11836 |    102780 |  41579 |     0,52 | True  |
+| 12  | SOLVED |    24 |    18133 |    154835 |  54567 |     0,86 | True  |
+| 13  | SOLVED |    27 |    16341 |    106119 |  39815 |     0,51 | True  |
+| 14  | SOLVED |    25 |    20435 |    131122 |  40256 |     0,68 | True  |
+| 15  | SOLVED |    73 |   127746 |   1190501 | 526162 |    10,38 | True  |
+| 16  | SOLVED |    54 |    90042 |    890783 | 354818 |     6,78 | True  |
+| 17  | SOLVED |    98 |   120702 |   1170028 | 521078 |    10,29 | True  |
+| 18  | SOLVED |   101 |   112072 |   1099002 | 472556 |    10,28 | True  |
+| 19  | SOLVED |    86 |   123009 |   1122116 | 521662 |    10,65 | True  |
 ### Ghi chú
-Số liệu thời gian có thể dao động giữa các lần chạy; kết quả trên là trung bình của ba lần đo với cùng timebound.
-
-Bảng đo trên solver đã có pha gọt tuần 4, không phải cột Weighted A* tuần 3. Không cần tắt ARA*, không cần thêm pha, không cần một bộ đo ARA* riêng.
-### Kết quả cho thấy 20/20 map SOLVED và Valid=True. Tuy nhiên, thời gian benchmark của Map 10, 15, 16, 17, 18 và 19 vượt 5 giây một chút. 
-### Nhận xét: đạt 20/20 lời giải hợp lệ, nhưng một số map vượt nhẹ mốc 5 giây.
+- Benchmark các map 0, 5, 10 và 14 sử dụng `timebound = 10`, mỗi map chạy 3 lần và lấy kết quả trung bình.
+- Số liệu thời gian có thể dao động giữa các lần chạy do ảnh hưởng của môi trường thực thi.
+- Số liệu cProfile được lấy từ các lần chạy profiler riêng, không sử dụng thay thế cho thời gian benchmark thông thường.
+- Benchmark toàn bộ 20 map sau tối ưu cho kết quả 20/20 SOLVED và tất cả lời giải đều Valid.
+- Một số map có kích thước tìm kiếm lớn, đặc biệt Map 15, 17, 18 và 19 có thời gian thực thi khoảng 10 giây hoặc hơn.
 
 ### Thay đổi
-- Chuẩn hóa vị trí robot trong khóa tìm kiếm bằng `_search_key`, dùng tuple robot đã sắp xếp.
-- Giữ nguyên thứ tự robot trong từng trạng thái để bảo toàn action và đường dẫn parent.
+- Chuẩn hóa vị trí robot trong khóa tìm kiếm bằng `_search_key`, sử dụng tuple robot đã sắp xếp để nhận diện các trạng thái tương đương.
+- Không thay đổi thứ tự robot bên trong từng trạng thái gốc, nhằm bảo toàn thông tin action và đường dẫn parent.
+- Nhờ đó, các trạng thái chỉ khác nhau về thứ tự robot có thể được xem là cùng một trạng thái khi kiểm tra trùng lặp.
+- Không làm thay đổi tính hợp lệ của lời giải hoặc số bước tối ưu tìm được trong các map đã kiểm tra.
 
 ### Benchmark trước/sau
-Timebound:10s. Mỗi map chạy 3 lần; bảng ghi trung bình. Map 0, 5, 10 và 14 được dùng để so sánh.
-
-| Map | Steps trước → sau | Expanded trước → sau | Generated trước → sau | Unique trước → sau | Time (s) trước → sau |
-|---:|---:|---:|---:|---:|---:|
-| 0 | 16 → 16 | 6.299 → 4.054 | 31.957 → 20.401 | 9.226 → 5.780 | 0,147 → 0,093 |
-| 5 | 30 → 30 | 11.016 → 7.047 | 52.680 → 33.745 | 13.510 → 8.206 | 0,223 → 0,143 |
-| 10 | 36 → 30 | 89.965 → 75.263 | 792.412 → 662.362 | 306.710 → 236.712 | 5,100 → 4,493 |
-| 14 | 25 → 25 | 23.545 → 21.994 | 151.102 → 141.083 | 56.326 → 48.371 | 0,670 → 0,651 |
+- Sau tối ưu, cả bốn map đều giảm số node Expanded, Generated và Unique.
+- Map 0: Expanded giảm khoảng 35,6%, Generated giảm 36,2%, thời gian từ 0,15s xuống 0,125s.
+- Map 5: Expanded giảm khoảng 36,0%, Generated giảm khoảng 35,9%, thời gian từ 0,22s xuống 0,157s.
+- Map 10: Steps giảm từ 36 xuống 30; Expanded và Generated đều giảm khoảng 16,5%. Thời gian gần như không đổi, từ 5,10s xuống 5,057s.
+- Map 14: Expanded giảm khoảng 14,2%, Generated giảm khoảng 14,3%, Unique giảm khoảng 29,7%. Tuy nhiên, thời gian tăng nhẹ từ 0,67s lên 0,682s.
+- Nhìn chung, tối ưu đối xứng robot giúp giảm đáng kể số trạng thái cần xử lý trên cả bốn map. Hiệu quả giảm node rõ rệt hơn mức cải thiện thời gian thực thi.
 
 ### Kiểm tra
-- Sau thay đổi, cả 4 map đều SOLVED và lời giải đều Valid.
-- Chạy toàn bộ map sau thay đổi: SOLVED = 20/20; các lời giải đều Valid.
+- Sau thay đổi, cả 4 map benchmark đều SOLVED và lời giải đều Valid.
+- Số bước của Map 0, 5 và 14 được giữ nguyên; Map 10 giảm từ 36 xuống 30 bước.
+- Chạy toàn bộ bộ test 20 map sau tối ưu: SOLVED = 20/20, tất cả lời giải đều Valid.
+- Không ghi nhận trường hợp thuật toán trả về lời giải không hợp lệ trong các bộ test đã chạy.
+- Kết quả cho thấy việc chuẩn hóa khóa tìm kiếm không làm mất tính đúng đắn của thuật toán và vẫn bảo toàn khả năng tìm lời giải hợp lệ.
 
 ### cProfile
-- Trước thay đổi, các phần tốn thời gian chính là sinh successor (`successors`) và heuristic, gồm `h_admissible`, `h_fast` và kiểm tra khối 2x2.
-- Sau thay đổi, các phần này vẫn chiếm phần lớn thời gian. `_search_key` xuất hiện thêm trong profile, nhưng số node duyệt giảm trên cả bốn map benchmark.
-- Kết quả benchmark cho thấy giảm số node và thời gian ở cả bốn map; mức cải thiện nhỏ hơn ở Map 14..
+- Trước tối ưu, thời gian chủ yếu tập trung ở quá trình sinh trạng thái kế tiếp (`successors()`) và các hàm heuristic như `h_admissible()`, `h_fast()`, cùng các hàm kiểm tra khối 2x2.
+- Sau tối ưu, `successors()` và các hàm heuristic vẫn là những thành phần tiêu tốn thời gian chính.
+- Map 0: Thời gian cumulative của `successors()` giảm từ 0,135s xuống 0,090s; `h_admissible()` giảm từ 0,080s xuống 0,056s.
+- Map 5: `successors()` giảm từ 0,212s xuống 0,149s; `h_admissible()` giảm từ 0,105s xuống 0,068s.
+- Map 10: `h_fast()` vẫn là hàm tốn thời gian nổi bật nhất, với 4,250s cumulative; tiếp theo là `successors()` (3,352s), `h_admissible()` (2,170s) và `buoc_di_bo()` (2,128s).
+- Map 14: `successors()` có cumulative time 0,371s; tiếp theo là `h_admissible()` (0,255s) và `h_fast()` (0,246s).
+- `_search_key()` xuất hiện với số lần gọi lớn, đặc biệt ở Map 10 có 681.305 lần gọi và cumulative time 0,390s. Đây là chi phí bổ sung để chuẩn hóa và nhận diện trạng thái tương đương.
+- Tổng thể, kết quả benchmark xác nhận số trạng thái cần xử lý giảm trên cả bốn map. Tuy nhiên, thời gian thực thi không giảm tương ứng trong mọi trường hợp, cho thấy chi phí xử lý bổ sung và các thành phần heuristic vẫn ảnh hưởng đáng kể đến hiệu năng.
 
 ### Đếm `unique` theo trạng thái gốc
 - `_search_key(state)` vẫn được dùng trong `best_g` để chuẩn hóa thứ tự robot, giúp A* gộp các trạng thái tương đương khi tìm đường.
