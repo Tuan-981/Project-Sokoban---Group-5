@@ -524,16 +524,14 @@ def solve(initial_state, timebound=120):
         LAST_STATS.update(elapsed=perf_counter() - started, status="TIMEOUT")
         return False
 
-    # PHA 3: Lặp Refinement (w = 1.8, frontier dùng h_fast, cắt cận dùng h_admissible)
-    # - Frontier dùng h_fast (giảm ~32% node mở rộng), cắt cận dùng h_admissible (an toàn tuyệt đối không cắt nhầm).
-    # - Mỗi lượt có hạn riêng 2.0s. Lượt không rút được bước dừng trong hạn này.
-    # - Còn ít nhất 1.5 giây và lần vừa rồi rút được bước thì siết tiếp với cost_bound mới.
-    round_budget = 2.0
+    # PHA 3: Refinement (w = 1.8) — Dồn thời gian còn lại siết cận gọt bước
+    # - Frontier dùng h_fast để ưu tiên tìm kiếm nhanh, cắt cận dùng h_admissible để bảo đảm an toàn.
+    # - Lượt gọt đầu dùng toàn bộ thời gian còn lại đến effective_deadline (đã giữ phần đệm an toàn).
+    # - Chỉ mở lượt tiếp theo nếu lượt trước thực sự giảm số bước và vẫn còn ít nhất 1.5 giây.
     while effective_deadline - perf_counter() >= 1.5:
-        round_deadline = min(effective_deadline, perf_counter() + round_budget)
         refined_sol = a_star_search(
             initial_state, h_fast, timebound, started,
-            weight=1.8, deadline=round_deadline,
+            weight=1.8, deadline=effective_deadline,
             cost_bound=best_sol.gval,
             rescue_on_timeout=True,
             prune_heuristic_fn=h_admissible
@@ -541,7 +539,7 @@ def solve(initial_state, timebound=120):
         if refined_sol and refined_sol.gval < best_sol.gval:
             best_sol = refined_sol
         else:
-            # Hết giờ (None), cạn frontier (False), hoặc không rút thêm được bước -> dừng lặp
+            # Hết giờ (None), cạn frontier (False), hoặc không rút thêm được bước -> dừng
             break
 
     LAST_STATS.update(elapsed=perf_counter() - started, status="SOLVED")
