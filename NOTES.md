@@ -982,7 +982,7 @@ Vì vậy, tie-break theo `h` là một cải tiến đáng giữ lại và ti�
 
 ### Baseline trước tối ưu
 - Lệnh benchmark: `python benchmark.py --maps 0 5 10 14 --timebound 10`
-- Timebound: 5 giây/map
+- Timebound: 10 giây/map
 - Benchmark lặp: 3 lần
 
 | Map | Trạng thái / Valid | Steps | Expanded TB | Generated TB | Unique TB | Time TB (s) | Hàm nổi bật trong profile |
@@ -1019,26 +1019,26 @@ Kết quả cProfile:
 Benchmark đủ 20 map:
 | Map | Status | Steps | Expanded | Generated | Unique | Time (s) | Valid |
 | --- | ------ | ----: | -------: | --------: | -----: | -------: | ----- |
-| 0   | SOLVED |    16 |     4054 |     20401 |   5780 |     0.09 | True  |
-| 1   | SOLVED |     4 |       20 |       106 |     56 |     0.00 | True  |
-| 2   | SOLVED |    21 |     1231 |      3342 |   1511 |     0.02 | True  |
-| 3   | SOLVED |    10 |      358 |      2292 |    645 |     0.01 | True  |
-| 4   | SOLVED |     8 |      165 |      1088 |    300 |     0.00 | True  |
-| 5   | SOLVED |    30 |     7047 |     33745 |   8206 |     0.14 | True  |
-| 6   | SOLVED |    16 |      384 |      1837 |    624 |     0.01 | True  |
-| 7   | SOLVED |    41 |      841 |      2063 |    859 |     0.01 | True  |
-| 8   | SOLVED |    14 |     3241 |     29526 |  10716 |     0.12 | True  |
-| 9   | SOLVED |    24 |    14820 |    160770 |  64734 |     1.14 | True  |
-| 10  | SOLVED |    30 |    73902 |    650441 | 232406 |     4.49 | True  |
-| 11  | SOLVED |    26 |    12361 |    107691 |  35443 |     0.52 | True  |
-| 12  | SOLVED |    24 |    15740 |    133998 |  47640 |     0.90 | True  |
-| 13  | SOLVED |    27 |    15910 |    103227 |  34496 |     0.52 | True  |
-| 14  | SOLVED |    25 |    22874 |    146625 |  50131 |     0.69 | True  |
-| 15  | SOLVED |    73 |    67272 |    632051 | 255275 |    10.23 | True  |
-| 16  | SOLVED |    58 |    83995 |    830704 | 304690 |    10.25 | True  |
-| 17  | SOLVED |    98 |    81861 |    802527 | 269053 |    10.20 | True  |
-| 18  | SOLVED |   101 |    78249 |    761434 | 293090 |    10.19 | True  |
-| 19  | SOLVED |    86 |    77567 |    707538 | 279048 |    10.24 | True  |
+| 0   | SOLVED |    16 |     4054 |     20401 |   7637 |     0,10 | True  |
+| 1   | SOLVED |     4 |       20 |       106 |     57 |     0,00 | True  |
+| 2   | SOLVED |    21 |     1231 |      3342 |   1551 |     0,02 | True  |
+| 3   | SOLVED |    10 |      358 |      2292 |    933 |     0,01 | True  |
+| 4   | SOLVED |     8 |      165 |      1088 |    408 |     0,00 | True  |
+| 5   | SOLVED |    30 |     7047 |     33745 |  10820 |     0,17 | True  |
+| 6   | SOLVED |    16 |      384 |      1837 |    721 |     0,01 | True  |
+| 7   | SOLVED |    41 |      841 |      2063 |    917 |     0,01 | True  |
+| 8   | SOLVED |    14 |     3241 |     29526 |  11154 |     0,15 | True  |
+| 9   | SOLVED |    24 |    13405 |    145765 |  61853 |     1,18 | True  |
+| 10  | SOLVED |    30 |    73577 |    647757 | 258385 |     4,97 | True  |
+| 11  | SOLVED |    26 |    12144 |    105642 |  42486 |     0,53 | True  |
+| 12  | SOLVED |    24 |    19018 |    162260 |  55852 |     0,83 | True  |
+| 13  | SOLVED |    27 |    17492 |    113711 |  42421 |     0,51 | True  |
+| 14  | SOLVED |    25 |    19980 |    128134 |  39039 |     0,66 | True  |
+| 15  | SOLVED |    73 |   133811 |   1249463 | 554201 |    10,18 | True  |
+| 16  | SOLVED |    54 |    90667 |    897113 | 357121 |     6,34 | True  |
+| 17  | SOLVED |    98 |   117451 |   1139010 | 507348 |    10,13 | True  |
+| 18  | SOLVED |   101 |   110698 |   1084930 | 466432 |    10,13 | True  |
+| 19  | SOLVED |    86 |   118253 |   1079415 | 501994 |    10,15 | True  |
 ### Ghi chú
 Số liệu thời gian có thể dao động giữa các lần chạy; kết quả trên là trung bình của ba lần đo với cùng timebound.
 
@@ -1055,15 +1055,14 @@ Timebound:10s. Mỗi map chạy 3 lần; bảng ghi trung bình. Map 0, 5, 10 v�
 
 | Map | Steps trước → sau | Expanded trước → sau | Generated trước → sau | Unique trước → sau | Time (s) trước → sau |
 |---:|---:|---:|---:|---:|---:|
-| 0 | 16 → 16 | 6,299 → 4,054 | 31,957 → 20,401 | 9,226 → 5,780 | 0.147 → 0.093 |
-| 5 | 30 → 30 | 11,016 → 7,047 | 52,680 → 33,745 | 13,510 → 8,206 | 0.223 → 0.143 |
-| 10 | 36 → 30 | 89,965 → 75,263 | 792,412 → 662,362 | 306,710 → 236,712 | 5.100 → 4.493 |
-| 14 | 25 → 25 | 23,545 → 21,994 | 151,102 → 141,083 | 56,326 → 48,371 | 0.670 → 0.651 |
+| 0 | 16 → 16 | 6.299 → 4.054 | 31.957 → 20.401 | 9.226 → 5.780 | 0,147 → 0,093 |
+| 5 | 30 → 30 | 11.016 → 7.047 | 52.680 → 33.745 | 13.510 → 8.206 | 0,223 → 0,143 |
+| 10 | 36 → 30 | 89.965 → 75.263 | 792.412 → 662.362 | 306.710 → 236.712 | 5,100 → 4,493 |
+| 14 | 25 → 25 | 23.545 → 21.994 | 151.102 → 141.083 | 56.326 → 48.371 | 0,670 → 0,651 |
 
 ### Kiểm tra
 - Sau thay đổi, cả 4 map đều SOLVED và lời giải đều Valid.
 - Chạy toàn bộ map sau thay đổi: SOLVED = 20/20; các lời giải đều Valid.
-- Map 10 tìm được lời giải 30 bước sau thay đổi, so với 36 bước trước đó.
 
 ### cProfile
 - Trước thay đổi, các phần tốn thời gian chính là sinh successor (`successors`) và heuristic, gồm `h_admissible`, `h_fast` và kiểm tra khối 2x2.
