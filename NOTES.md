@@ -980,6 +980,91 @@ Vì vậy, tie-break theo `h` là một cải tiến đáng giữ lại và ti�
 **Tổng kết:** Đạt tỷ lệ 20/20 maps (100% SOLVED), không có map nào bị TIMEOUT trong ngân sách 5 giây.
 
 
+## Tuần 3 - Trâm(D): Bộ 5 map tự tạo ; nâng cấp benchmark 
+
+### 1. Bộ custom_maps
+
+| Tên                | Bàn | Tình huống |   Bắt lỗi gì      | Mong đợi    |
+|0: vo_nghiem_goc    | 4x3 |Thùng kẹt ở |Solver không trả   |             |
+|                    |     |góc trênphải|False,đúng (treo,  | Vô nghiệm   |
+|                    |     |góc không   |crash, trả nhầm)   |             |
+|                    |     |phải đích   |                   |             |
+|1:                  |     |            |                   |             |
+|dich_nhieu_hon_thung| 5x3 |2 thùng,    |Heuristic ghép     |             |
+|                    |     |3 đích      |cặp sai; solver    | 4 bước      |
+|                    |     |            |không hiểu đích    |             |
+|                    |     |            |thừa               |             |
+|2: thung_da_o_dich  | 5x3 |1 thùng đã  |Heuristic tính     |             |
+|                    |     |ở đích nhưng|sai thùng đã ở đích| 5 bước      |
+|                    |     |chắn đường  |không biết đi vòng |             |
+|                    |     |robot       |                   |             |
+|3:mot_robot_re_goc  | 5x4 |1 robot,    |Sai khi đẩy rẽ góc |             |
+|                    |     |thùng phải  |đếm sai chi phí đi |8 bước       |
+|                    |     |đẩy rẽ góc  |bộ cộng đẩy        |             |
+|                    |     |(phải 2,    |                   |             |
+|                    |     | xuống 2)   |                   |             |
+|4:nhieu_robot       | 5x4 |3 robot, 2  |                   |             |
+|                    |     |thùng,2 đích|Lỗi khi nhiều robot|             |
+|                    |     |            |(sinh con, validate|8 bước       |
+|                    |     |            |khử đối xứng)      |             |
+
+**Cách có đáp án mong đợi:** Tính tay trên giấy trước, rồi đối chiếu với một BFS độc lập (cho nghiệm tối ưu theo định nghĩa). Ví dụ map 3: robot đi tới (1,1) mất 2 bước, đẩy phải 2 lần, robot lên rồi sang (4,0) mất 2 bước, đẩy xuống 2 lần, tổng 8.
+**Quy ước Khi sửa custom_maps.py:** Thêm map mới vào cuối danh sách, không đổi tên và toạ độ 5 map cũ, không thêm phần tử thứ tư vào bộ ba. Lý do: test_custom_maps.py, test_heuristic.py và benchmark.py đều lấy map theo tên và "mở gói" bộ ba này; các giá trị mong đợi ở trên tính từ đúng toạ độ hiện tại.
+
+### 2. Kiểm thử 
+python -m unittest test_framework
+python -m unittest test_custom_maps -v
+python -m unittest test_heuristic -v
+python autograder.py
+
+**test_custom_maps.py dùng subTest:** một test kiểm tra cả 5 map, map nào sai thì báo đúng tên map cùng giá trị mong đợi và giá trị nhận được. Map vô nghiệm phải trả đúng False (không phải None); các map còn lại phải có lời giải hợp lệ (validate_solution) với gval bằng số bước mong đợi.
+
+**Test bế tắc 2×2:** dùng bốn map phụ, khai báo ngay trong test_heuristic.py. Bàn 6×5, cùng khối 4 ô (2,1), (3,1), (2,2), (3,2)
+
+
+|Map|	         Mô tả                               | Bế tắc 2×2?       	         | solve mong đợi        |
+|A	|4 thùng tạo khối 2×2, chưa thùng nào trên đích| Có	                         |False                  |
+|B	|4 thùng tạo khối 2×2, cả 4 nằm trên đích	     | Không (không được loại nhầm)|Trả chính initial_state|
+|C	|3 thùng hình chữ L, còn một ô trống trong khối| Không	                     |18 bước (BFS xác nhận) |
+|D	|Khối 2×2, 3 thùng đã trên đích, 1 thùng chưa	 | Có                          |False                  |
+
+**Các nhóm test còn lại:** ô chết và khoảng cách đẩy (giá trị tay ở trên); hai heuristic h_admissible và h_fast (h_fast chỉ kiểm tra hữu hạn, không đòi admissible vì Sổ tay ghi nó có thể không admissible); và admissible dọc đường tối ưu trên map 0 đến 8 của thầy (chi phí tối ưu lấy từ BFS độc lập, đồng thời không trạng thái nào trên lời giải bị coi là bế tắc).
+
+### 3. Nâng cấp benchmark
+benchmark.py chạy mỗi map trong một tiến trình mới có timeout (tiến trình con chết thì chỉ ghi TIMEOUT hoặc CRASH, bảng vẫn chạy tiếp).
+
+|   Tham số       |	         Công dụng	                                                             |
+|--timebound	    |  Thời gian tối đa cho mỗi map (giây), mặc định 30	                               |
+|--maps 0 1 2     |	Chỉ chạy các map này (mặc định chạy hết)	                                       |
+|--solver <module>|	Chọn module solver (mặc định solution), ví dụ solution_bfs_baseline để so với BFS|
+|--set problems   |  Chọn bộ 20 map của thầy hoặc bộ 5 map tự tạo                                    |
+|hoặc --set custom|	                                                                                 |
+|--md	            |  In thêm bảng Markdown ra màn hình	                                             |
+|--out <file>	    |  Ghi bảng Markdown vào file (tự ghi, không cần --md)	                           |
+
+**Các thay đổi khác:** đọc thêm cột Expanded, Generated, Unique từ LAST_STATS của solver (solver không có thống kê thì hiện -); bảng Markdown căn cột thẳng hàng (cột số căn phải), tiêu đề tiếng Anh, thời gian ghi 3 chữ số thập phân cho khớp bảng in ra màn hình.
+
+**Bộ custom:** bảng Markdown có thêm ba cột. Name là tên map, Expected là số bước mong đợi (hoặc "vô nghiệm"), Check là kết quả đối chiếu:
+
+
+  Check	                      |          Nghĩa là
+khớp	                        | Số bước đúng bằng mong đợi
+lệch +N / lệch -N	            | Số bước hơn / kém mong đợi N bước
+khớp vô nghiệm	              | Map vô nghiệm và solver xác nhận vô nghiệm
+không kết luận	              | Hết giờ, chưa biết đúng hay sai
+BẤT THƯỜNG:tìm được nghiệm	  | Map đã được xác định vô nghiệm mà solver lại tìm ra nghiệm
+KHÔNG KHỚP: không giải được	  | Map có nghiệm mà solver trả False
+LỖI: crash / LỖI: lời giải sai|	Crash, hoặc validate_solution báo sai
+
+- Cột này chỉ có ở bảng Markdown; bảng in từng map ra màn hình giữ nguyên, và bộ problems giữ nguyên định dạng cũ. Cột Check dựa vào trường status mà solver ghi trong LAST_STATS; nếu solver ghi nhãn khác quy ước thì đọc thêm cột Status.
+- Lệnh chạy thường dùng:
+python benchmark.py --timebound 20                                    # 20 map, xem nhanh
+python benchmark.py --timebound 120 --md --out results_full.md        # 20 map, bảng cho báo cáo
+python benchmark.py --set custom --timebound 20 --md                  # 5 map tự tạo, có cột Check
+python benchmark.py --solver solution_bfs_baseline --maps 0 1 2 3 4 5 6 7 --timebound 120   # BFS để đối chiếu
+
+**Chú ý:**Các file results_*.md là file nháp sinh ra từ lệnh trên, không commit (đã ghi trong .gitignore).
+
 ## Tuần 4 — Tuấn (A): Nâng cấp Anytime Repairing A* (ARA*) & Gọt tỉa số bước tối ưu
 
 ### 1. Động lực và Thiết kế kỹ thuật (Vùng 4 & 5 trong solution.py)
