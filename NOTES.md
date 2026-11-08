@@ -981,7 +981,7 @@ Vì vậy, tie-break theo `h` là một cải tiến đáng giữ lại và ti�
 ## Tuần 3 — Long: Giảm đối xứng robot
 
 ### Baseline trước tối ưu
-- Lệnh benchmark: `python benchmark.py --maps 0 5 10 14 --timebound 5`
+- Lệnh benchmark: `python benchmark.py --maps 0 5 10 14 --timebound 10`
 - Timebound: 5 giây/map
 - Benchmark lặp: 3 lần
 
@@ -990,7 +990,7 @@ Vì vậy, tie-break theo `h` là một cải tiến đáng giữ lại và ti�
 | 0 | SOLVED / True | 16 | 6.299 | 31.957 | 9.226 | 0,15 | `successors()` — cumtime 0,135s; `h_admissible()` — 0,080s |
 | 5 | SOLVED / True | 30 | 11.016 | 52.680 | 13.510 | 0,22 | `successors()` — cumtime 0,212s; `h_admissible()` — 0,105s |
 | 10 | SOLVED / True | 36 | 88.559 | 779.578 | 300.782 | 5,10 | `h_fast()` — cumtime 4,959s; `successors()` — cumtime 3,474s |
-| 14 | SOLVED / True | 25 | 23.545 | 151.102 | 55.993 | 0,67 | `successors()` — cumtime 0,389s; `h_admissible()` — 0,299s |
+| 14 | SOLVED / True | 25 | 23.545 | 151.102 | 56.326 | 0,67 | `successors()` — cumtime 0,389s; `h_admissible()` — 0,299s |
 
 ### Phân tích cProfile
 - Map 0: `successors()` có cumtime 0,135s; tiếp theo là `h_admissible()` (0,080s).
@@ -1017,14 +1017,41 @@ Kết quả cProfile:
 | 14 | 25 | 13.663 | 87.343 | 32.940 | 0,897 | `successors()` 0,346s; `h_admissible()` 0,248s; `h_fast()` 0,214s |
 
 Benchmark đủ 20 map:
-Kết quả bạn gửi cho thấy 20/20 map SOLVED và Valid=True. Tuy nhiên, thời gian benchmark của Map 10, 15, 16, 17, 18 và 19 vượt 5 giây một chút. Nên ghi rõ trong phần nhận xét: đạt 20/20 lời giải hợp lệ, nhưng một số map vượt nhẹ mốc 5 giây.
+| Map | Status | Steps | Expanded | Generated | Unique | Time (s) | Valid |
+| --- | ------ | ----: | -------: | --------: | -----: | -------: | ----- |
+| 0   | SOLVED |    16 |     4054 |     20401 |   5780 |     0.09 | True  |
+| 1   | SOLVED |     4 |       20 |       106 |     56 |     0.00 | True  |
+| 2   | SOLVED |    21 |     1231 |      3342 |   1511 |     0.02 | True  |
+| 3   | SOLVED |    10 |      358 |      2292 |    645 |     0.01 | True  |
+| 4   | SOLVED |     8 |      165 |      1088 |    300 |     0.00 | True  |
+| 5   | SOLVED |    30 |     7047 |     33745 |   8206 |     0.14 | True  |
+| 6   | SOLVED |    16 |      384 |      1837 |    624 |     0.01 | True  |
+| 7   | SOLVED |    41 |      841 |      2063 |    859 |     0.01 | True  |
+| 8   | SOLVED |    14 |     3241 |     29526 |  10716 |     0.12 | True  |
+| 9   | SOLVED |    24 |    14820 |    160770 |  64734 |     1.14 | True  |
+| 10  | SOLVED |    30 |    73902 |    650441 | 232406 |     4.49 | True  |
+| 11  | SOLVED |    26 |    12361 |    107691 |  35443 |     0.52 | True  |
+| 12  | SOLVED |    24 |    15740 |    133998 |  47640 |     0.90 | True  |
+| 13  | SOLVED |    27 |    15910 |    103227 |  34496 |     0.52 | True  |
+| 14  | SOLVED |    25 |    22874 |    146625 |  50131 |     0.69 | True  |
+| 15  | SOLVED |    73 |    67272 |    632051 | 255275 |    10.23 | True  |
+| 16  | SOLVED |    58 |    83995 |    830704 | 304690 |    10.25 | True  |
+| 17  | SOLVED |    98 |    81861 |    802527 | 269053 |    10.20 | True  |
+| 18  | SOLVED |   101 |    78249 |    761434 | 293090 |    10.19 | True  |
+| 19  | SOLVED |    86 |    77567 |    707538 | 279048 |    10.24 | True  |
+### Ghi chú
+Số liệu thời gian có thể dao động giữa các lần chạy; kết quả trên là trung bình của ba lần đo với cùng timebound.
+
+Bảng đo trên solver đã có pha gọt tuần 4, không phải cột Weighted A* tuần 3. Không cần tắt ARA*, không cần thêm pha, không cần một bộ đo ARA* riêng.
+### Kết quả cho thấy 20/20 map SOLVED và Valid=True. Tuy nhiên, thời gian benchmark của Map 10, 15, 16, 17, 18 và 19 vượt 5 giây một chút. 
+### Nhận xét: đạt 20/20 lời giải hợp lệ, nhưng một số map vượt nhẹ mốc 5 giây.
 
 ### Thay đổi
 - Chuẩn hóa vị trí robot trong khóa tìm kiếm bằng `_search_key`, dùng tuple robot đã sắp xếp.
 - Giữ nguyên thứ tự robot trong từng trạng thái để bảo toàn action và đường dẫn parent.
 
 ### Benchmark trước/sau
-Timebound: 5 giây. Mỗi map chạy 3 lần; bảng ghi trung bình. Map 0, 5, 10 và 14 được dùng để so sánh.
+Timebound:10s. Mỗi map chạy 3 lần; bảng ghi trung bình. Map 0, 5, 10 và 14 được dùng để so sánh.
 
 | Map | Steps trước → sau | Expanded trước → sau | Generated trước → sau | Unique trước → sau | Time (s) trước → sau |
 |---:|---:|---:|---:|---:|---:|
@@ -1041,11 +1068,13 @@ Timebound: 5 giây. Mỗi map chạy 3 lần; bảng ghi trung bình. Map 0, 5, 
 ### cProfile
 - Trước thay đổi, các phần tốn thời gian chính là sinh successor (`successors`) và heuristic, gồm `h_admissible`, `h_fast` và kiểm tra khối 2x2.
 - Sau thay đổi, các phần này vẫn chiếm phần lớn thời gian. `_search_key` xuất hiện thêm trong profile, nhưng số node duyệt giảm trên cả bốn map benchmark.
-- Kết quả benchmark cho thấy giảm số node và thời gian ở cả bốn map; mức cải thiện nhỏ hơn ở Map 14.
+- Kết quả benchmark cho thấy giảm số node và thời gian ở cả bốn map; mức cải thiện nhỏ hơn ở Map 14..
 
-### Ghi chú
-Số liệu thời gian có thể dao động giữa các lần chạy; kết quả trên là trung bình của ba lần đo với cùng timebound.
-
+### Đếm `unique` theo trạng thái gốc
+- `_search_key(state)` vẫn được dùng trong `best_g` để chuẩn hóa thứ tự robot, giúp A* gộp các trạng thái tương đương khi tìm đường.
+- Chỉ số `unique` được đếm riêng theo `state.hashable_state()`: tính trạng thái đầu và mỗi trạng thái con ngay khi được sinh, trước khi kiểm tra trùng trong `best_g`.
+- Vì vậy, trạng thái con bị loại do `_search_key` đã có vẫn được tính nếu `hashable_state()` của nó là cấu hình mới. Thứ tự robot, `action` và `parent` trong state không bị thay đổi.
+- Kiểm tra Map 1: `python benchmark_astar.py --maps 1 --timebound 10`. Kết quả mong đợi sau thay đổi là `SOLVED`, `Valid=True` và `Unique=57`.
 
 ## Tuần 3 - Trâm(D): Bộ 5 map tự tạo ; nâng cấp benchmark 
 

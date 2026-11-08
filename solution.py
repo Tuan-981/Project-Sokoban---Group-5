@@ -19,6 +19,7 @@ LAST_STATS = {
     "elapsed": 0.0,  # Thời gian chạy tính bằng giây
     "status": "NOT_RUN",  # NOT_RUN, RUNNING, SOLVED, TIMEOUT hoặc FAILED
 }
+_UNIQUE_STATE_KEYS = set()
 
 
 # ===== VÙNG 2: Ô chết và bảng khoảng cách (B - Hải Anh) =====
@@ -355,6 +356,11 @@ def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, d
         deadline = started + timebound
     tie_counter = itertools.count()
 
+    init_state_key = initial_state.hashable_state()
+    if init_state_key not in _UNIQUE_STATE_KEYS:
+        _UNIQUE_STATE_KEYS.add(init_state_key)
+        LAST_STATS["unique"] += 1
+
     h_init = heuristic_fn(initial_state)
     if h_init >= INF:
         return False
@@ -370,8 +376,6 @@ def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, d
 
     init_key = _search_key(initial_state)
     best_g = {init_key: initial_state.gval}
-    if LAST_STATS["unique"] == 0:
-        LAST_STATS["unique"] = 1
 
     while frontier:
         if perf_counter() >= deadline:
@@ -401,6 +405,11 @@ def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, d
         # đã sinh; gặp đích còn ngắn hơn cận thì nhận, không gọi heuristic nữa.
         timed_out = False
         for child in successors:
+            state_key = child.hashable_state()
+            if state_key not in _UNIQUE_STATE_KEYS:
+                _UNIQUE_STATE_KEYS.add(state_key)
+                LAST_STATS["unique"] += 1
+
             if not timed_out and perf_counter() >= deadline:
                 timed_out = True
             if timed_out:
@@ -413,8 +422,6 @@ def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, d
                 child_key = _search_key(child)
                 if child_key in best_g and child.gval >= best_g[child_key]:
                     continue
-                if child_key not in best_g:
-                    LAST_STATS["unique"] += 1
                 return child
             child_key = _search_key(child)
 
@@ -438,8 +445,6 @@ def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, d
                 if cost_bound is not None and child.gval + h_c >= cost_bound:
                     continue
 
-            if child_key not in best_g:
-                LAST_STATS["unique"] += 1
             best_g[child_key] = child.gval
 
             f_child = child.gval + weight * h_c
@@ -465,7 +470,9 @@ def solve(initial_state, timebound=120):
                để gọt ngắn số bước với cost_bound = best_solution.gval (không phân mảnh thời gian).
     """
     global LAST_STATS
+    global _UNIQUE_STATE_KEYS
     started = perf_counter()
+    _UNIQUE_STATE_KEYS = set()
     LAST_STATS = {
         "expanded": 0,
         "generated": 0,
