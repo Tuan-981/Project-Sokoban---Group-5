@@ -1001,104 +1001,12 @@ Vì vậy, tie-break theo `h` là một cải tiến đáng giữ lại và ti�
 
 ### Kết quả sau tối ưu
  Benchmark sau tối ưu:
-| Map | Trạng thái | Bước | Expanded TB | Generated TB | Unique TB | Thời gian TB (s) | Valid |
-|---:|---|---:|---:|---:|---:|---:|:---:|
-| 0 | SOLVED | 16 | 4.054 | 20.401 | 5.780 | 0,093 | Có |
-| 5 | SOLVED | 30 | 7.047 | 33.745 | 8.206 | 0,143 | Có |
-| 10 | SOLVED | 30 | 75.263 | 662.362 | 236.712 | 4,493 | Có |
-| 14 | SOLVED | 25 | 21.994 | 141.083 | 48.371 | 0,651 | Có |
-
-Kết quả cProfile:
-| Map | Bước | Expanded | Generated | Unique | Thời gian profile (s) | Hàm tốn thời gian nổi bật |
-|---:|---:|---:|---:|---:|---:|---|
-| 0 | 16 | 4.054 | 20.401 | 5.780 | 0,180 | `successors()` 0,087s; `h_admissible()` 0,052s |
-| 5 | 30 | 7.047 | 33.745 | 8.206 | 0,287 | `successors()` 0,147s; `h_admissible()` 0,069s |
-| 10 | 30 | 70.092 | 618.028 | 221.918 | 9,525 | `h_fast()` 4,420s; `successors()` 3,296s; `buoc_di_bo()` 2,211s |
-| 14 | 25 | 13.663 | 87.343 | 32.940 | 0,897 | `successors()` 0,346s; `h_admissible()` 0,248s; `h_fast()` 0,214s |
-
-Benchmark đủ 20 map:
 | Map | Status | Steps | Expanded | Generated | Unique | Time (s) | Valid |
-| --- | ------ | ----: | -------: | --------: | -----: | -------: | ----- |
-| 0   | SOLVED |    16 |     4054 |     20401 |   7637 |     0,10 | True  |
-| 1   | SOLVED |     4 |       20 |       106 |     57 |     0,00 | True  |
-| 2   | SOLVED |    21 |     1231 |      3342 |   1551 |     0,02 | True  |
-| 3   | SOLVED |    10 |      358 |      2292 |    933 |     0,01 | True  |
-| 4   | SOLVED |     8 |      165 |      1088 |    408 |     0,00 | True  |
-| 5   | SOLVED |    30 |     7047 |     33745 |  10820 |     0,17 | True  |
-| 6   | SOLVED |    16 |      384 |      1837 |    721 |     0,01 | True  |
-| 7   | SOLVED |    41 |      841 |      2063 |    917 |     0,01 | True  |
-| 8   | SOLVED |    14 |     3241 |     29526 |  11154 |     0,15 | True  |
-| 9   | SOLVED |    24 |    13405 |    145765 |  61853 |     1,18 | True  |
-| 10  | SOLVED |    30 |    73577 |    647757 | 258385 |     4,97 | True  |
-| 11  | SOLVED |    26 |    12144 |    105642 |  42486 |     0,53 | True  |
-| 12  | SOLVED |    24 |    19018 |    162260 |  55852 |     0,83 | True  |
-| 13  | SOLVED |    27 |    17492 |    113711 |  42421 |     0,51 | True  |
-| 14  | SOLVED |    25 |    19980 |    128134 |  39039 |     0,66 | True  |
-| 15  | SOLVED |    73 |   133811 |   1249463 | 554201 |    10,18 | True  |
-| 16  | SOLVED |    54 |    90667 |    897113 | 357121 |     6,34 | True  |
-| 17  | SOLVED |    98 |   117451 |   1139010 | 507348 |    10,13 | True  |
-| 18  | SOLVED |   101 |   110698 |   1084930 | 466432 |    10,13 | True  |
-| 19  | SOLVED |    86 |   118253 |   1079415 | 501994 |    10,15 | True  |
-### Ghi chú
-Số liệu thời gian có thể dao động giữa các lần chạy; kết quả trên là trung bình của ba lần đo với cùng timebound.
-
-Bảng đo trên solver đã có pha gọt tuần 4, không phải cột Weighted A* tuần 3. Không cần tắt ARA*, không cần thêm pha, không cần một bộ đo ARA* riêng.
-### Kết quả cho thấy 20/20 map SOLVED và Valid=True. Tuy nhiên, thời gian benchmark của Map 10, 15, 16, 17, 18 và 19 vượt 5 giây một chút. 
-### Nhận xét: đạt 20/20 lời giải hợp lệ, nhưng một số map vượt nhẹ mốc 5 giây.
-
-### Thay đổi
-- Chuẩn hóa vị trí robot trong khóa tìm kiếm bằng `_search_key`, dùng tuple robot đã sắp xếp.
-- Giữ nguyên thứ tự robot trong từng trạng thái để bảo toàn action và đường dẫn parent.
-
-### Benchmark trước/sau
-Timebound: 5 giây. Mỗi map chạy 3 lần; bảng ghi trung bình. Map 0, 5, 10 và 14 được dùng để so sánh.
-
-| Map | Steps trước → sau | Expanded trước → sau | Generated trước → sau | Unique trước → sau | Time (s) trước → sau |
-|---:|---:|---:|---:|---:|---:|
-| 0 | 16 → 16 | 6.299 → 4.054 | 31.957 → 20.401 | 9.226 → 5.780 | 0,147 → 0,093 |
-| 5 | 30 → 30 | 11.016 → 7.047 | 52.680 → 33.745 | 13.510 → 8.206 | 0,223 → 0,143 |
-| 10 | 36 → 30 | 89.965 → 75.263 | 792.412 → 662.362 | 306.710 → 236.712 | 5,100 → 4,493 |
-| 14 | 25 → 25 | 23.545 → 21.994 | 151.102 → 141.083 | 56.326 → 48.371 | 0,670 → 0,651 |
-
-### Kiểm tra
-- Sau thay đổi, cả 4 map đều SOLVED và lời giải đều Valid.
-- Chạy toàn bộ map sau thay đổi: SOLVED = 20/20; các lời giải đều Valid.
-
-### cProfile
-- Trước thay đổi, các phần tốn thời gian chính là sinh successor (`successors`) và heuristic, gồm `h_admissible`, `h_fast` và kiểm tra khối 2x2.
-- Sau thay đổi, các phần này vẫn chiếm phần lớn thời gian. `_search_key` xuất hiện thêm trong profile, nhưng số node duyệt giảm trên cả bốn map benchmark.
-- Kết quả benchmark cho thấy giảm số node và thời gian ở cả bốn map; mức cải thiện nhỏ hơn ở Map 14.
-
-### Ghi chú
-Số liệu thời gian có thể dao động giữa các lần chạy; kết quả trên là trung bình của ba lần đo với cùng timebound.
-
-### Baseline trước tối ưu
-- Lệnh benchmark: `python benchmark.py --maps 0 5 10 14 --timebound 10`
-- Timebound: 10 giây/map
-- Benchmark lặp: 3 lần
-
-| Map | Trạng thái / Valid | Steps | Expanded TB | Generated TB | Time TB (s) | Hàm nổi bật trong profile |
-|---:|---|---:|---:|---:|---:|---|
-| 0 | SOLVED / True | 16 | 6.299 | 31.957 | 0,15 | `successors()` — cumtime 0,135s; `h_admissible()` — 0,080s |
-| 5 | SOLVED / True | 30 | 11.016 | 52.680 | 0,22 | `successors()` — cumtime 0,212s; `h_admissible()` — 0,105s |
-| 10 | SOLVED / True | 36 | 88.559 | 779.578 | 5,10 | `h_fast()` — cumtime 4,959s; `successors()` — cumtime 3,474s |
-| 14 | SOLVED / True | 25 | 23.545 | 151.102 | 0,67 | `successors()` — cumtime 0,389s; `h_admissible()` — 0,299s |
-
-### Phân tích cProfile
-- Map 0: `successors()` có cumtime 0,135s; tiếp theo là `h_admissible()` (0,080s).
-- Map 5: `successors()` có cumtime 0,212s; tiếp theo là `h_admissible()` (0,105s).
-- Map 10: `h_fast()` có cumtime 4,959s; `successors()` 3,474s; các hàm con đáng chú ý là `buoc_di_bo()` (2,441s) và `ket_2x2()` (2,117s).
-- Map 14: `successors()` có cumtime 0,389s; tiếp theo là `h_admissible()` (0,299s) và `h_fast()` (0,282s).
-- Lệnh profiler: `python profile_solver.py --map <map> --timebound 10`
-
-### Kết quả sau tối ưu
- Benchmark sau tối ưu:
-| Map | Status | Steps | Expanded | Generated | Time (s) | Valid |
-|---:|---|---:|---:|---:|---:|---|
-| 0 | SOLVED | 16 | 4,054 | 20,401 | **0,125** | True |
-| 5 | SOLVED | 30 | 7,047 | 33,745 | **0,157** | True |
-| 10 | SOLVED | 30 | 73,999.33 | 651,283.33 | **5,057** | True |
-| 14 | SOLVED | 25 | 20,198.67 | 129,560 | **0,682** | True |
+|---:|---|---:|---:|---:|---:|---:|---|
+| 0 | SOLVED | 16 | 4,054 | 20,401 | 7,637 | **0,125** | True |
+| 5 | SOLVED | 30 | 7,047 | 33,745 | 10,820 | **0,157** | True |
+| 10 | SOLVED | 30 | 73,999.33 | 651,283.33 | 259,332.33 | **5,057** | True |
+| 14 | SOLVED | 25 | 20,198.67 | 129,560 | 39,599.67 | **0,682** | True |
 
 Kết quả cProfile:
 | Map | Bước | Expanded | Generated | Unique | Thời gian profile (s) | Hàm tốn thời gian nổi bật |
@@ -1145,16 +1053,16 @@ Benchmark đủ 20 map:
 - Không làm thay đổi tính hợp lệ của lời giải hoặc số bước tối ưu tìm được trong các map đã kiểm tra.
 
 ### Benchmark trước/sau
-- Sau tối ưu, cả bốn map đều giảm số node Expanded và Generated.
+- Sau tối ưu, cả bốn map đều giảm số node Expanded, Generated và Unique.
 - Map 0: Expanded giảm khoảng 35,6%, Generated giảm 36,2%, thời gian từ 0,15s xuống 0,125s.
 - Map 5: Expanded giảm khoảng 36,0%, Generated giảm khoảng 35,9%, thời gian từ 0,22s xuống 0,157s.
-- Map 10: Expanded và Generated đều giảm khoảng 16,5%. Thời gian gần như không đổi, từ 5,10s xuống 5,057s.
-- Map 14: Expanded giảm khoảng 14,2%, Generated giảm khoảng 14,3%. Tuy nhiên, thời gian tăng nhẹ từ 0,67s lên 0,682s.
+- Map 10: Steps giảm từ 36 xuống 30; Expanded và Generated đều giảm khoảng 16,5%. Thời gian gần như không đổi, từ 5,10s xuống 5,057s.
+- Map 14: Expanded giảm khoảng 14,2%, Generated giảm khoảng 14,3%, Unique giảm khoảng 29,7%. Tuy nhiên, thời gian tăng nhẹ từ 0,67s lên 0,682s.
 - Nhìn chung, tối ưu đối xứng robot giúp giảm đáng kể số trạng thái cần xử lý trên cả bốn map. Hiệu quả giảm node rõ rệt hơn mức cải thiện thời gian thực thi.
 
 ### Kiểm tra
 - Sau thay đổi, cả 4 map benchmark đều SOLVED và lời giải đều Valid.
-- Số bước của Map 0, 5 và 14 được giữ nguyên.
+- Số bước của Map 0, 5 và 14 được giữ nguyên; Map 10 giảm từ 36 xuống 30 bước.
 - Chạy toàn bộ bộ test 20 map sau tối ưu: SOLVED = 20/20, tất cả lời giải đều Valid.
 - Không ghi nhận trường hợp thuật toán trả về lời giải không hợp lệ trong các bộ test đã chạy.
 - Kết quả cho thấy việc chuẩn hóa khóa tìm kiếm không làm mất tính đúng đắn của thuật toán và vẫn bảo toàn khả năng tìm lời giải hợp lệ.
