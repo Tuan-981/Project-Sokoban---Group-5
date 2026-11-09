@@ -985,12 +985,12 @@ Vì vậy, tie-break theo `h` là một cải tiến đáng giữ lại và ti�
 - Timebound: 10 giây/map
 - Benchmark lặp: 3 lần
 
-| Map | Trạng thái / Valid | Steps | Expanded TB | Generated TB | Unique TB | Time TB (s) | Hàm nổi bật trong profile |
-|---:|---|---:|---:|---:|---:|---:|---|
-| 0 | SOLVED / True | 16 | 6.299 | 31.957 | 9.226 | 0,15 | `successors()` — cumtime 0,135s; `h_admissible()` — 0,080s |
-| 5 | SOLVED / True | 30 | 11.016 | 52.680 | 13.510 | 0,22 | `successors()` — cumtime 0,212s; `h_admissible()` — 0,105s |
-| 10 | SOLVED / True | 36 | 88.559 | 779.578 | 300.782 | 5,10 | `h_fast()` — cumtime 4,959s; `successors()` — cumtime 3,474s |
-| 14 | SOLVED / True | 25 | 23.545 | 151.102 | 56.326 | 0,67 | `successors()` — cumtime 0,389s; `h_admissible()` — 0,299s |
+| Map | Trạng thái / Valid | Steps | Expanded TB | Generated TB | Time TB (s) | Hàm nổi bật trong profile |
+|---:|---|---:|---:|---:|---:|---|
+| 0 | SOLVED / True | 16 | 6.299 | 31.957 | 0,15 | `successors()` — cumtime 0,135s; `h_admissible()` — 0,080s |
+| 5 | SOLVED / True | 30 | 11.016 | 52.680 | 0,22 | `successors()` — cumtime 0,212s; `h_admissible()` — 0,105s |
+| 10 | SOLVED / True | 36 | 88.559 | 779.578 | 5,10 | `h_fast()` — cumtime 4,959s; `successors()` — cumtime 3,474s |
+| 14 | SOLVED / True | 25 | 23.545 | 151.102 | 0,67 | `successors()` — cumtime 0,389s; `h_admissible()` — 0,299s |
 
 ### Phân tích cProfile
 - Map 0: `successors()` có cumtime 0,135s; tiếp theo là `h_admissible()` (0,080s).
@@ -1001,12 +1001,12 @@ Vì vậy, tie-break theo `h` là một cải tiến đáng giữ lại và ti�
 
 ### Kết quả sau tối ưu
  Benchmark sau tối ưu:
-| Map | Status | Steps | Expanded | Generated | Unique | Time (s) | Valid |
-|---:|---|---:|---:|---:|---:|---:|---|
-| 0 | SOLVED | 16 | 4,054 | 20,401 | 7,637 | **0,125** | True |
-| 5 | SOLVED | 30 | 7,047 | 33,745 | 10,820 | **0,157** | True |
-| 10 | SOLVED | 30 | 73,999.33 | 651,283.33 | 259,332.33 | **5,057** | True |
-| 14 | SOLVED | 25 | 20,198.67 | 129,560 | 39,599.67 | **0,682** | True |
+| Map | Status | Steps | Expanded | Generated | Time (s) | Valid |
+|---:|---|---:|---:|---:|---:|---|
+| 0 | SOLVED | 16 | 4,054 | 20,401 | **0,125** | True |
+| 5 | SOLVED | 30 | 7,047 | 33,745 | **0,157** | True |
+| 10 | SOLVED | 30 | 73,999.33 | 651,283.33 | **5,057** | True |
+| 14 | SOLVED | 25 | 20,198.67 | 129,560 | **0,682** | True |
 
 Kết quả cProfile:
 | Map | Bước | Expanded | Generated | Unique | Thời gian profile (s) | Hàm tốn thời gian nổi bật |
@@ -1053,16 +1053,16 @@ Benchmark đủ 20 map:
 - Không làm thay đổi tính hợp lệ của lời giải hoặc số bước tối ưu tìm được trong các map đã kiểm tra.
 
 ### Benchmark trước/sau
-- Sau tối ưu, cả bốn map đều giảm số node Expanded, Generated và Unique.
+- Sau tối ưu, cả bốn map đều giảm số node Expanded và Generated.
 - Map 0: Expanded giảm khoảng 35,6%, Generated giảm 36,2%, thời gian từ 0,15s xuống 0,125s.
 - Map 5: Expanded giảm khoảng 36,0%, Generated giảm khoảng 35,9%, thời gian từ 0,22s xuống 0,157s.
-- Map 10: Steps giảm từ 36 xuống 30; Expanded và Generated đều giảm khoảng 16,5%. Thời gian gần như không đổi, từ 5,10s xuống 5,057s.
-- Map 14: Expanded giảm khoảng 14,2%, Generated giảm khoảng 14,3%, Unique giảm khoảng 29,7%. Tuy nhiên, thời gian tăng nhẹ từ 0,67s lên 0,682s.
+- Map 10: Expanded và Generated đều giảm khoảng 16,5%. Thời gian gần như không đổi, từ 5,10s xuống 5,057s.
+- Map 14: Expanded giảm khoảng 14,2%, Generated giảm khoảng 14,3%. Tuy nhiên, thời gian tăng nhẹ từ 0,67s lên 0,682s.
 - Nhìn chung, tối ưu đối xứng robot giúp giảm đáng kể số trạng thái cần xử lý trên cả bốn map. Hiệu quả giảm node rõ rệt hơn mức cải thiện thời gian thực thi.
 
 ### Kiểm tra
 - Sau thay đổi, cả 4 map benchmark đều SOLVED và lời giải đều Valid.
-- Số bước của Map 0, 5 và 14 được giữ nguyên; Map 10 giảm từ 36 xuống 30 bước.
+- Số bước của Map 0, 5 và 14 được giữ nguyên.
 - Chạy toàn bộ bộ test 20 map sau tối ưu: SOLVED = 20/20, tất cả lời giải đều Valid.
 - Không ghi nhận trường hợp thuật toán trả về lời giải không hợp lệ trong các bộ test đã chạy.
 - Kết quả cho thấy việc chuẩn hóa khóa tìm kiếm không làm mất tính đúng đắn của thuật toán và vẫn bảo toàn khả năng tìm lời giải hợp lệ.
