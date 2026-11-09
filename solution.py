@@ -514,15 +514,22 @@ def solve(initial_state, timebound=120):
     best_sol = a_star_search(initial_state, h_fast, timebound, started,
                              weight=3.0, deadline=effective_deadline)
 
-    # Nếu h_fast chưa ra, thử pha dự phòng với h_admissible (w = 2.0)
-    if best_sol is None or best_sol is False:
+    # Nếu frontier cạn (False) -> toàn bộ không gian đã duyệt hết, vô nghiệm tuyệt đối
+    if best_sol is False:
+        LAST_STATS.update(elapsed=perf_counter() - started, status="FAILED")
+        return False
+
+    # Nếu đụng deadline (None) và còn giờ -> thử pha dự phòng với h_admissible (w = 2.0)
+    if best_sol is None:
         if perf_counter() < effective_deadline:
             best_sol = a_star_search(initial_state, h_admissible, timebound, started,
                                      weight=2.0, deadline=effective_deadline)
-
-    if best_sol is None or best_sol is False:
-        LAST_STATS.update(elapsed=perf_counter() - started, status="TIMEOUT")
-        return False
+        if best_sol is False:
+            LAST_STATS.update(elapsed=perf_counter() - started, status="FAILED")
+            return False
+        if best_sol is None:
+            LAST_STATS.update(elapsed=perf_counter() - started, status="TIMEOUT")
+            return False
 
     # PHA 3: Refinement (w = 1.8) — Dồn thời gian còn lại siết cận gọt bước
     # - Frontier dùng h_fast để ưu tiên tìm kiếm nhanh, cắt cận dùng h_admissible để bảo đảm an toàn.
