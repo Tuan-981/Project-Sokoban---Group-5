@@ -434,7 +434,7 @@ def a_star_search(initial_state, heuristic_fn, timebound, started, weight=1.0, d
                     continue
                 if cost_bound is not None and child.gval + h_p >= cost_bound:
                     continue
-                h_c = heuristic_fn(child)
+                h_c = h_p if heuristic_fn is prune_heuristic_fn else heuristic_fn(child)
                 if h_c >= INF:
                     continue
             else:
@@ -465,8 +465,8 @@ def solve(initial_state, timebound=120):
                Giải quyết Maps 0-8 với số bước tối ưu 100% khớp BFS.
       - Pha 2 (Rapid Feasible Solution): Weighted A* (w = 3.0, h_fast) tìm nghiệm hợp lệ đầu tiên,
                chống hoàn toàn rủi ro Timeout trên maps lớn.
-      - Pha 3 (Focused Refinement w = 1.8): Nếu còn >= 1.5s, dồn toàn bộ thời gian còn lại
-               để gọt ngắn số bước với cost_bound = best_solution.gval (không phân mảnh thời gian).
+      - Pha 3 (Focused Refinement w = 1.8): Nếu còn >= 1.5s, mỗi lượt gọt có hạn riêng 2.0s.
+               Lượt không rút được bước dừng trong hạn đó, không chạy tới hạn chung.
     """
     global LAST_STATS
     started = perf_counter()
@@ -527,8 +527,13 @@ def solve(initial_state, timebound=120):
                              weight=3.0, deadline=effective_deadline,
                              unique_seen=unique_seen)
 
-    # Nếu h_fast chưa ra, thử pha dự phòng với h_admissible (w = 2.0)
-    if best_sol is None or best_sol is False:
+    # Nếu frontier cạn (False) -> toàn bộ không gian đã duyệt hết, vô nghiệm tuyệt đối
+    if best_sol is False:
+        LAST_STATS.update(elapsed=perf_counter() - started, status="FAILED")
+        return False
+
+    # Nếu đụng deadline (None) và còn giờ -> thử pha dự phòng với h_admissible (w = 2.0)
+    if best_sol is None:
         if perf_counter() < effective_deadline:
             best_sol = a_star_search(initial_state, h_admissible, timebound, started,
                                      weight=2.0, deadline=effective_deadline,
@@ -550,9 +555,11 @@ def solve(initial_state, timebound=120):
             prune_heuristic_fn=h_admissible,
             unique_seen=unique_seen
         )
-        # Pha 3: nếu hết giờ trả None; nếu cạn frontier trả False (đã chứng minh tối ưu); nếu ra nghiệm thì gọt bước
         if refined_sol and refined_sol.gval < best_sol.gval:
             best_sol = refined_sol
+        else:
+            # Hết giờ (None), cạn frontier (False), hoặc không rút thêm được bước -> dừng
+            break
 
     LAST_STATS.update(elapsed=perf_counter() - started, status="SOLVED")
     return best_sol
