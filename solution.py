@@ -557,9 +557,6 @@ def solve(initial_state, timebound=120):
         )
         if refined_sol and refined_sol.gval < best_sol.gval:
             best_sol = refined_sol
-        else:
-            # Hết giờ (None), cạn frontier (False), hoặc không rút thêm được bước -> dừng
-            break
 
     LAST_STATS.update(elapsed=perf_counter() - started, status="SOLVED")
     return best_sol
