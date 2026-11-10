@@ -32,7 +32,7 @@ Chương trình được tổ chức thành các thành phần chính trong `sol
 * **Tối ưu cấu trúc dữ liệu (`new_boxes`):** Sử dụng `frozenset` cho tập hợp thùng (`boxes`). Khi robot di chuyển không đẩy thùng, trạng thái con tái sử dụng nguyên vẹn tham chiếu `self.boxes` thay vì tạo bản sao mới liên tục, giảm thiểu chi phí cấp phát bộ nhớ.
 * **Chiến lược Tie-break theo $h$:** Khi hai trạng thái có cùng giá trị $f = g + h$, ưu tiên trạng thái có $h$ nhỏ hơn (`(f, h, tie_counter, state)`), giúp thuật toán hội tụ nhanh thẳng về đích và giảm số node mở rộng từ 30% đến 55%.
 * **Chiến lược Anytime / Phased Search trong `solve()`:**
-  * **Pha 1 (Optimal Fast Phase):** Chạy A* chuẩn ($w = 1.0$) với $h_{\text{admissible}}$ trong ngân sách ngắn ($\min(0.75\text{s}, 0.25 \times \text{timebound})$) để đạt số bước tối ưu tuyệt đối ở các map nhỏ.
+  * **Pha 1 (Optimal Fast Phase):** Chạy A* chuẩn ($w = 1.0$) với $h_{\text{admissible}}$ trong ngân sách ngắn ($\min(0.45\text{s}, 0.15 \times \text{timebound})$) để đạt số bước tối ưu tuyệt đối ở các map nhỏ.
   * **Pha 2 (Fast Weighted Phase):** Chuyển sang Weighted A* ($w = 3.0$) với $h_{\text{fast}}$ để lao nhanh về đích ở các map lớn.
   * **Pha 3 (Refinement / Cost-Bound Pruning):** Tận dụng thời gian còn lại để hạ trọng số ($w = 1.8$) và áp dụng cắt tỉa cận trên ($g(s) + h(s) \ge \text{cost\_bound}$), giúp gọt giũa số bước đi ngắn hơn trên các map phức tạp.
 
@@ -60,7 +60,7 @@ Nhóm đã tiến hành kiểm thử toàn diện trên bộ 20 bản đồ tiê
 
 ### 3.1. Bảng kết quả thực nghiệm trên bộ 20 Maps tiêu chuẩn
 
-Dưới đây là kết quả tổng hợp khi chạy solver với ngân sách thời gian $\text{timebound} = 5\text{s}$:
+Dưới đây là kết quả tổng hợp khi chạy solver với ngân sách thời gian $\text{timebound} = 10\text{s}$:
 
 | Map ID | Trạng thái | Số bước ($gval$) | Node sinh (Generated) | Node mở rộng (Expanded) | Trạng thái duy nhất (Unique) | Thời gian (s) | Hợp lệ (Valid) |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
