@@ -109,4 +109,4 @@ Bộ 5 map tự tạo bởi thành viên Trâm (D) giúp kiểm tra các ca biê
 
 * **Tài liệu tham khảo:** Giáo trình Trí tuệ nhân tạo (*Artificial Intelligence: A Modern Approach*), các tài liệu về thuật toán A*, Weighted A*, ARA* và các kỹ thuật phát hiện Deadlock trong trò chơi Sokoban.
 * **Mã nguồn:** Xây dựng dựa trên bộ khung Python cung cấp sẵn của bài tập lớn (gồm `sokoban.py`, `state.py`, `validation.py`), được mở rộng bởi các module do nhóm tự phát triển (`solution.py`, `benchmark.py`, `custom_maps.py`, các script kiểm thử unit test).
-* **Công cụ hỗ trợ:** Sử dụng thư viện chuẩn `heapq`, `itertools`, module `cProfile` để profiling hiệu năng hàm, cùng sự hỗ trợ phân tích code của công cụ AI trong việc gỡ lỗi cấu trúc dữ liệu và tối ưu hóa vòng lặp.
+* **Công cụ hỗ trợ:** Sử dụng thư viện chuẩn `heapq`, `itertools`, module `cProfile` để profiling hiệu năng hàm. Công cụ AI: Codex, Grok hỗ trợ phân tích hàm và thuật toán tối ưu, Gemini hỗ trợ thao tác code và kiêm tra bug, lỗi lặt vặt.
