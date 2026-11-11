@@ -571,6 +571,7 @@ new_boxes = frozenset(new_boxes)
 
 #### 4.1. Công cụ đo
 
+
 Sử dụng chương trình `benchmark_astar.py` để đo hiệu năng thuật toán A*.
 
 Lệnh thực hiện:
