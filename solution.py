@@ -108,10 +108,14 @@ def make_heuristic(initial_state):
     """
     Heuristic h1: Tổng khoảng cách đẩy ngắn nhất từ mỗi thùng đến đích gần nhất.
     """
-    dist, dist_to_goal, dead = tinh_bang(initial_state)
-    cache = {}
+    _, dist_to_goal, _ = tinh_bang(initial_state)
+    cache = {}  # cache cục bộ theo từng lần gọi make_heuristic, không phải biến toàn cục
 
     def h(s):
+        """
+        Tính h1(s) = tổng khoảng cách đẩy từ mỗi thùng tới đích gần nhất.
+        Trả về INF nếu có thùng nằm trên ô chết. Chỉ đọc s, không sửa s.
+        """
         boxes = s.boxes
         key = tuple(sorted(boxes))
 
@@ -137,7 +141,7 @@ def make_heuristic_h2(initial_state):
     Mỗi thùng chỉ được vào một ô đích riêng biệt.
     h2(s) >= h1(s) và hoàn toàn admissible.
     """
-    dist, dist_to_goal, dead = tinh_bang(initial_state)
+    dist, dist_to_goal, _ = tinh_bang(initial_state)
     goals = list(initial_state.storage)
     ng = len(goals)
 
@@ -147,9 +151,14 @@ def make_heuristic_h2(initial_state):
 
     full = 1 << ng
     popcount = [bin(m).count("1") for m in range(full)]
-    cache = {}
+    cache = {}  # cache cục bộ theo từng lần gọi make_heuristic_h2
 
     def h(s):
+        """
+        Tính h2(s) = tổng khoảng cách đẩy của phép ghép thùng-đích 1-1 tốt nhất (DP bitmask).
+        Trả về INF nếu số thùng > số đích, có thùng ở ô chết, hoặc không ghép được.
+        Chỉ đọc s, không sửa s.
+        """
         boxes = s.boxes
         key = tuple(sorted(boxes))
 
@@ -205,7 +214,7 @@ def make_heuristic_h2(initial_state):
         cache[key] = result
         return result
 
-    return h 
+    return h
 
 # ----- TUẦN 3 & 4 (B - Hải Anh): h_admissible / h_fast và ô chết khối 2x2 -----
 
@@ -256,10 +265,12 @@ def lam_ham_khoi_2x2(initial_state):
     storage = initial_state.storage
 
     def bi_chan(c, boxes):
+        """True nếu ô c là ngoài bàn, tường hoặc có thùng (robot không tính)."""
         x, y = c
         return (not (0 <= x < w and 0 <= y < h)) or c in walls or c in boxes
 
     def ket_2x2(boxes):
+        """True nếu tập thùng `boxes` tạo bế tắc khối 2x2 (xem docstring hàm ngoài)."""
         for b in boxes:
             if b in storage:
                 continue  # chỉ xét quanh thùng CHƯA ở đích
@@ -303,6 +314,7 @@ def make_heuristics(initial_state, dung_2x2=True):
                        if 0 <= n[0] < w and 0 <= n[1] < hh and n not in walls]
 
     def h_admissible(s):
+        """h admissible cho pha w = 1: INF nếu bế tắc 2x2, ngược lại h2(s)."""
         if ket_2x2(s.boxes):
             return INF
         return h2(s)
@@ -328,6 +340,7 @@ def make_heuristics(initial_state, dung_2x2=True):
         return 0 if best is None else best
 
     def h_fast(s):
+        """h cho pha w > 1 (có thể không admissible): h_admissible(s) + buoc_di_bo(s)."""
         base = h_admissible(s)
         if base >= INF:
             return INF

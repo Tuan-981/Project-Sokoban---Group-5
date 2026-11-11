@@ -1187,3 +1187,24 @@ python benchmark.py --solver solution_bfs_baseline --maps 0 1 2 3 4 5 6 7 --time
 | **Map 14** | 29 | **25** | **-4 bước (-13.8%)** | 1.26s |
 
 - **Kết luận:** Tỷ lệ giải quyết tiếp tục duy trì **20/20 MAPS (100% SOLVED)**, đồng thời tổng số bước trên các map khó giảm đáng kể từ 2 đến 6 bước mỗi map mà vẫn chạy kịp trong ngân sách 5 giây.
+
+
+
+####
+## Tuần 4 — Hải Anh (B): bug bash, dọn code
+
+### Đã làm
+- Bug bash phần heuristic và ô chết bằng test_HaiAnh_tuan4.py (15 test, tất cả OK): map 1x1, không thùng,
+  thùng đã ở đích, thùng nhiều hơn đích, thùng ở góc chết, đích nhiều hơn thùng, nhiều robot,
+  heuristic không sửa state, không dùng biến toàn cục, timebound 0 / âm / rất nhỏ.
+- Dọn code vùng 2-3: thêm docstring cho các hàm lồng (h, bi_chan, ket_2x2, h_admissible, h_fast).
+  Không đổi logic.
+
+### Kiểm chứng admissible
+- test_heuristic.py kiểm tra h_admissible <= chi phí còn lại dọc đường tối ưu trên map 0..8: đạt.
+- Chưa chạy thực nghiệm trên map ngẫu nhiên. h_fast chưa chứng minh admissible nên chỉ dùng ở w > 1.
+
+### Ghi chú chuyển cho A (Vùng 5, không phải phần còn thiếu của B)
+- Khi đo, solve() chạy quá timebound khoảng 0,06-0,17 s vì deadline = started + timebound không có biên.
+  Đề xuất để A đánh giá: deadline = started + timebound - min(1.0, 0.03 * timebound).
+  B không sửa code này; quyết định thuộc về A.
