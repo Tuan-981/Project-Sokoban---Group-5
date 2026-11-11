@@ -14,7 +14,7 @@
 
 - <H Anh>-16/10/2026  Đã review PR baseline BFS của A (PR #__): đã đọc, tự giải thích được vòng lặp BFS, đã chạy thử trên máy. Câu hỏi để lại: __.
 - Đã xây dựng heuristic tổng khoảng cách đẩy để ước lượng số lần đẩy hộp tối thiểu cần thiết nhằm đưa tất cả hộp đến các ô đích (storage).
-## Tuần 1 — Thành viên H Anh : Heuristic tổng khoảng cách đẩy
+### Tuần 1 — Thành viên H Anh : Heuristic tổng khoảng cách đẩy
 
 ### 1.
 
@@ -321,7 +321,7 @@ h(PROBLEMS[1]) = 2
 Đây là giá trị heuristic tính theo số lần đẩy, không bao gồm số bước robot đi để tiếp cận vị trí đẩy.
 
 
-# Thống nhất cách đếm node mở rộng; chuẩn bị mẫu bảng số liệu 
+## Tuần 1 - Thành viên C(Long) - Thống nhất cách đếm node mở rộng; chuẩn bị mẫu bảng số liệu 
 
 ### 1. Quy ước đo lường
 
@@ -386,7 +386,7 @@ h(PROBLEMS[1]) = 2
 - [ ] Chuẩn bị script profiling bằng `cProfile` sau khi có solver chạy được.
 - [ ] Chạy public tests và ghi kết quả thực tế vào bảng.
 - [ ] Không kết luận A* tốt hơn BFS chỉ từ một test; so sánh trên cùng các map và cùng quy ước đếm.
-## Long —Thống kê BFS và kiểm thử PROBLEMS (16/10/2026)
+## Thành viên C - Thống kê BFS và kiểm thử PROBLEMS (16/10/2026)
 
 ### Triển khai trong bản làm việc
 - `solution.py`: dùng `time.perf_counter()` để đo thời gian bên trong `solve()`; giữ nguyên chữ ký `solve(initial_state, timebound=120)`.
@@ -412,30 +412,32 @@ h(PROBLEMS[1]) = 2
 - Lệnh chạy: `python benchmark.py --timebound 5` (Lệnh này chạy các map từ 0 đến 19, mỗi map có ngân sách 5 giây.)
 Chạy trong cùng môi trường Python, `timebound=0.1` giây/map. Đây là lần chạy thử nhanh để kiểm tra thống kê, **không phải kết luận hiệu năng cuối cùng**. Các map `TIMEOUT` chưa tìm được lời giải trong ngân sách này.
 
-Map  Status     Steps   Expanded  Generated   Unique   Time(s)  Valid
-------------------------------------------------------------------------------
-0    SOLVED        16      38626     188680    51917     0.625  True
-1    SOLVED         4         56        319      127     0.001  True
-2    SOLVED        21       4136      10887     4629     0.037  True
-3    SOLVED        10       6458      40280    10875     0.155  True
-4    SOLVED         8        928       5877     1498     0.022  True
-5    SOLVED        30     128745     604658   142407     2.064  True
-6    SOLVED        16       5593      27433     7319     0.113  True
-7    SOLVED        41       2308       5652     2346     0.016  True
-8    TIMEOUT     None     172852    1578971   400053     5.404  -
-9    TIMEOUT     None     118700    1352690   352767     5.272  -
-10   TIMEOUT     None     173374    1549503   400185     5.349  -
-11   TIMEOUT     None     182300    1656996   381977     5.222  -
-12   TIMEOUT     None     181044    1663570   378601     5.204  -
-13   TIMEOUT     None     242682    1581409   405123     5.219  -
-14   TIMEOUT     None     236291    1529016   402148     5.616  -
-15   TIMEOUT     None     154170    1527962   341112     5.224  -
-16   TIMEOUT     None     168059    1700605   358189     5.255  -
-17   TIMEOUT     None     154848    1546465   328564     5.516  -
-18   TIMEOUT     None     158796    1586552   346430     5.275  -
-19   TIMEOUT     None     154569    1537123   326848     5.224  -
-------------------------------------------------------------------------------
-Tong: SOLVED=8, TIMEOUT=12
+| Map | Status  | Steps | Expanded | Generated | Unique | Time (s) | Valid |
+|-----|---------|------:|---------:|----------:|-------:|---------:|-------|
+| 0   | SOLVED  | 16    | 38626    | 188680    | 51917  | 0.625    | True  |
+| 1   | SOLVED  | 4     | 56       | 319       | 127    | 0.001    | True  |
+| 2   | SOLVED  | 21    | 4136     | 10887     | 4629   | 0.037    | True  |
+| 3   | SOLVED  | 10    | 6458     | 40280     | 10875  | 0.155    | True  |
+| 4   | SOLVED  | 8     | 928      | 5877      | 1498   | 0.022    | True  |
+| 5   | SOLVED  | 30    | 128745   | 604658    | 142407 | 2.064    | True  |
+| 6   | SOLVED  | 16    | 5593     | 27433     | 7319   | 0.113    | True  |
+| 7   | SOLVED  | 41    | 2308     | 5652      | 2346   | 0.016    | True  |
+| 8   | TIMEOUT | None  | 172852   | 1578971   | 400053 | 5.404    | -     |
+| 9   | TIMEOUT | None  | 118700   | 1352690   | 352767 | 5.272    | -     |
+| 10  | TIMEOUT | None  | 173374   | 1549503   | 400185 | 5.349    | -     |
+| 11  | TIMEOUT | None  | 182300   | 1656996   | 381977 | 5.222    | -     |
+| 12  | TIMEOUT | None  | 181044   | 1663570   | 378601 | 5.204    | -     |
+| 13  | TIMEOUT | None  | 242682   | 1581409   | 405123 | 5.219    | -     |
+| 14  | TIMEOUT | None  | 236291   | 1529016   | 402148 | 5.616    | -     |
+| 15  | TIMEOUT | None  | 154170   | 1527962   | 341112 | 5.224    | -     |
+| 16  | TIMEOUT | None  | 168059   | 1700605   | 358189 | 5.255    | -     |
+| 17  | TIMEOUT | None  | 154848   | 1546465   | 328564 | 5.516    | -     |
+| 18  | TIMEOUT | None  | 158796   | 1586552   | 346430 | 5.275    | -     |
+| 19  | TIMEOUT | None  | 154569   | 1537123   | 326848 | 5.224    | -     |
+
+**Tổng kết:**
+- SOLVED = 8
+- TIMEOUT = 12
 
 **Lưu ý về timeout:** kiểm tra deadline được thực hiện giữa các lần mở rộng. Một lần gọi `successors()` có thể tốn nhiều thời gian, nên thời gian thực tế đôi khi vượt `timebound` (đặc biệt map 5). Đây là điểm cần ghi nhận khi tối ưu tiếp; không được hiểu timeout 0.1 giây là giới hạn cứng tuyệt đối.
 
@@ -445,9 +447,6 @@ Tong: SOLVED=8, TIMEOUT=12
 - Từ map 8-19 vẫn TIMEOUT thì đó là kết quả phản ánh giới hạn tìm kiếm của BFS trong ngân sách hiện tại, không còn là lỗi ghi trạng thái như trước. 
 - `StateSpace.n` không được dùng thay cho `expanded`: nó đếm số đối tượng trạng thái được khởi tạo.
 
-
-### Chưa hiểu / cần hỏi
-- ...
 
 ### Việc tuần sau (người - hạn)
 - Tuần 2: A (Tuấn) và B (Hải Anh) hoàn thành A* và Heuristic h1 theo biên bản thiết kế bên dưới.
@@ -497,9 +496,9 @@ obots, và tuyệt đối **không làm biến đổi (read-only)** đối tư�
    - Thứ 4: A mở PR cho A* (h = 0); B mở PR cho Ô chết và Bảng khoảng cách.
    - Review chéo: B review PR của A, C review PR của B theo đúng quy định sổ tay.
    - Thứ 5: A và B cùng ngồi ghép h1 vào A* trên nhánh tích hợp.
-# MEMBER C – HIỆU NĂNG VÀ KIỂM CHỨNG TỐI ƯU
+## Tuần 2 - Thành viên C(Long) – HIỆU NĂNG VÀ KIỂM CHỨNG TỐI ƯU
 
-## 1. Mục tiêu thực hiện
+### 1. Mục tiêu thực hiện
 
 Nhiệm vụ của thành viên C trong tuần 2:
 
@@ -510,7 +509,7 @@ Nhiệm vụ của thành viên C trong tuần 2:
 - Tối ưu cấu trúc dữ liệu nhằm giảm chi phí xử lý.
 - So sánh hiệu năng trước và sau tối ưu.
 
-## 2. Kiểm thử tính đúng đắn của framework
+### 2. Kiểm thử tính đúng đắn của framework
 
 Sau khi chỉnh sửa file `sokoban.py`, tiến hành kiểm thử bằng lệnh:
 
@@ -528,9 +527,9 @@ python -m unittest test_framework
 - Trạng thái mới được tạo chính xác.
 - Các trạng thái cũ không bị thay đổi ngoài ý muốn.
 
-## 3. Tối ưu cấu trúc dữ liệu `new_boxes`
+### 3. Tối ưu cấu trúc dữ liệu `new_boxes`
 
-### 3.1. Vấn đề trong phiên bản ban đầu
+#### 3.1. Vấn đề trong phiên bản ban đầu
 
 Trong hàm `successors()` của lớp `SokobanState`, mỗi lần xét một hướng di chuyển, chương trình đều tạo một bản sao của tập hợp hộp:
 
@@ -542,7 +541,7 @@ Tuy nhiên, phần lớn các bước di chuyển của robot không làm thay �
 
 Việc liên tục tạo bản sao không cần thiết gây ra chi phí xử lý và cấp phát bộ nhớ.
 
-### 3.2. Giải pháp tối ưu
+#### 3.2. Giải pháp tối ưu
 
 Thay vì luôn tạo bản sao, phiên bản mới sử dụng lại tập hợp `self.boxes`:
 
@@ -559,7 +558,7 @@ new_boxes.add(new_box_location)
 new_boxes = frozenset(new_boxes)
 ```
 
-### 3.3. Nguyên lý tối ưu
+#### 3.3. Nguyên lý tối ưu
 
 - `self.boxes` có kiểu `frozenset`, là tập hợp bất biến.
 - Khi robot di chuyển mà không đẩy hộp, trạng thái mới có thể dùng chung tập hợp hộp với trạng thái cũ.
@@ -568,9 +567,9 @@ new_boxes = frozenset(new_boxes)
 
 **Kết quả:** Giảm số lần sao chép tập hợp hộp khi sinh trạng thái kế tiếp, đồng thời giữ nguyên logic di chuyển của Sokoban.
 
-## 4. Đo lường và so sánh hiệu năng
+### 4. Đo lường và so sánh hiệu năng
 
-### 4.1. Công cụ đo
+#### 4.1. Công cụ đo
 
 Sử dụng chương trình `benchmark_astar.py` để đo hiệu năng thuật toán A*.
 
@@ -587,7 +586,7 @@ Hai bản đồ được lựa chọn:
 
 Mỗi bản đồ được chạy 3 lần sau tối ưu để tính thời gian trung bình.
 
-### 4.2. Các chỉ số đánh giá
+#### 4.2. Các chỉ số đánh giá
 
 | Chỉ số | Ý nghĩa |
 |---|---|
@@ -598,7 +597,7 @@ Mỗi bản đồ được chạy 3 lần sau tối ưu để tính thời gian 
 | Time(s) | Thời gian thực thi |
 | Valid | Lời giải có hợp lệ hay không |
 
-### 4.3. Kết quả sau tối ưu
+#### 4.3. Kết quả sau tối ưu
 
 Kết quả của 3 lần chạy:
 
@@ -614,7 +613,7 @@ Các chỉ số node trong cả 3 lần chạy đều giống nhau:
 | 0 | 16 | 9,517 | 47,952 | 14,182 | True |
 | 14 | 25 | 274,308 | 1,763,445 | 422,515 | True |
 
-### 4.4. So sánh thời gian trước và sau tối ưu
+#### 4.4. So sánh thời gian trước và sau tối ưu
 
 Dữ liệu đo trước tối ưu:
 
@@ -649,7 +648,7 @@ Lưu ý: Thời gian trước tối ưu hiện được ghi nhận từ một l�
 
 **Lưu ý về số node:** Số liệu Expanded, Generated và Unique trước tối ưu cần được bổ sung từ log benchmark phiên bản cũ. Không sử dụng số liệu từ những lần chạy A* có cấu hình hoặc phiên bản heuristic khác nhau để so sánh trực tiếp.
 
-## 5. Phân tích hiệu năng bằng cProfile
+### 5. Phân tích hiệu năng bằng cProfile
 
 Sử dụng công cụ `cProfile` để xác định các hàm tiêu tốn nhiều thời gian trong quá trình giải Sokoban.
 
@@ -671,7 +670,7 @@ Kết quả profiling cho thấy:
 
 Việc hạn chế tạo bản sao `new_boxes` không cần thiết là một cải tiến phù hợp với kết quả phân tích này.
 
-## 6. Kết luận
+### 6. Kết luận
 
 Trong tuần 2, thành viên C đã thực hiện:
 
@@ -683,15 +682,15 @@ Trong tuần 2, thành viên C đã thực hiện:
 - Ghi nhận thời gian chạy trung bình giảm khoảng 15.7% trên Map 0 và 21.1% trên Map 14 so với số liệu trước tối ưu đã có.
 
 **Đánh giá:** Cải tiến `new_boxes` giúp giảm chi phí xử lý khi sinh trạng thái mà không thay đổi quy tắc hoạt động của Sokoban.
-##7 . Tối ưu A* bằng chiến lược Tie-break theo h
+### 7 . Tối ưu A* bằng chiến lược Tie-break theo h
 
-### 7.1. Mục tiêu
+#### 7.1. Mục tiêu
 
 Cải thiện hiệu năng thuật toán A* bằng cách thay đổi chiến lược lựa chọn trạng thái khi có nhiều trạng thái cùng giá trị hàm đánh giá `f`.
 
 Giữ nguyên heuristic, cách sinh trạng thái và logic tìm kiếm; chỉ thay đổi thứ tự ưu tiên trong hàng đợi `frontier`.
 
-### 7.2. Hai chiến lược được so sánh
+#### 7.2. Hai chiến lược được so sánh
 
 **Phiên bản 1: A* FIFO (`solution.py`)**
 
@@ -740,7 +739,7 @@ heapq.heappush(
 
 Do `f` vẫn là tiêu chí ưu tiên đầu tiên nên tie-break chỉ thay đổi thứ tự xử lý giữa các trạng thái có cùng `f`.
 
-### 7.3. Chuẩn bị benchmark
+#### 7.3. Chuẩn bị benchmark
 
 Các file sử dụng:
 
@@ -764,7 +763,7 @@ Các điều kiện thử nghiệm:
 - Mỗi phiên bản chạy 3 lần.
 - Sử dụng Map 0 và Map 14 để so sánh.
 
-### 7.4. Kết quả benchmark
+#### 7.4. Kết quả benchmark
 
 Số liệu dưới đây là kết quả của 3 lần chạy. Thời gian được tính trung bình.
 
@@ -792,7 +791,7 @@ Số liệu dưới đây là kết quả của 3 lần chạy. Thời gian đư
 | Time trung bình | 8,267 s | 3,713 s |
 | Valid | True | True |
 
-### 7.5. Tỷ lệ cải thiện
+#### 7.5. Tỷ lệ cải thiện
 
 | Chỉ số | Map 0 | Map 14 |
 |---|---:|---:|
@@ -809,7 +808,7 @@ Công thức tính tỷ lệ giảm:
 {\text{FIFO}}\times 100\%
 \]
 
-### 7.6. Kiểm chứng tính đúng đắn
+#### 7.6. Kiểm chứng tính đúng đắn
 
 - Cả hai phiên bản đều tìm được lời giải trên Map 0 và Map 14.
 - Tất cả kết quả đều có `Valid = True`.
@@ -822,7 +821,7 @@ Công thức tính tỷ lệ giảm:
 
 Lưu ý: Kết quả trên hai bản đồ là bằng chứng thực nghiệm cho các trường hợp đã thử nghiệm, không thay thế chứng minh tính tối ưu trên mọi bản đồ. Tính tối ưu còn phụ thuộc vào tính chất của heuristic và điều kiện của thuật toán A*.
 
-### 7.7. Kết luận
+#### 7.7. Kết luận
 
 Chiến lược tie-break theo `h` cho kết quả tốt hơn FIFO trong hai bản đồ thử nghiệm.
 
@@ -835,7 +834,7 @@ Vì vậy, tie-break theo `h` là một cải tiến đáng giữ lại và ti�
 **Vai trò Member C:** Thực hiện thay đổi chiến lược tie-break, xây dựng benchmark riêng, kiểm chứng kết quả và phân tích mức cải thiện hiệu năng.
 
 
-# TUẦN 3:
+## TUẦN 3:
 
 ## Tuần 3 — Hải Anh (B): h_admissible, h_fast và ô chết khối 2x2
 
@@ -978,7 +977,7 @@ Vì vậy, tie-break theo `h` là một cải tiến đáng giữ lại và ti�
 | 19 | SOLVED | 86 | 16,268 | 150,783 | 56,826 | 1.74 | True |
 
 **Tổng kết:** Đạt tỷ lệ 20/20 maps (100% SOLVED), không có map nào bị TIMEOUT trong ngân sách 5 giây.
-## Tuần 3 — Long: Giảm đối xứng robot
+## Tuần 3 — Thành viên C(Long): Giảm đối xứng robot
 
 ### Baseline trước tối ưu
 - Lệnh benchmark: `python benchmark.py --maps 0 5 10 14 --timebound 10`
